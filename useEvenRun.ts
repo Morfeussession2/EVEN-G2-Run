@@ -11,6 +11,7 @@ import {
     formatPrimaryMetric,
     getMockOriginPoint,
     primaryMetricLabel,
+    shouldAcceptPoint,
 } from './metrics';
 import { fetchStreetRoute } from './routeService';
 import type {
@@ -26,7 +27,6 @@ import type {
 
 const ROUTE_WIDTH = 200;
 const ROUTE_HEIGHT = 100;
-const MOCK_ROUTE_INTERVAL_MS = 450;
 
 const makeSession = (activity: ActivityType = 'run'): WorkoutSession => ({
     activity,
@@ -52,7 +52,6 @@ export interface EvenRunViewModel {
     previewRoutePoints: WorkoutPoint[];
     pastRuns: PastRun[];
     routeLoading: boolean;
-    simulationActive: boolean;
     activityLabel: string;
     activityShortLabel: string;
     distanceLabel: string;
@@ -61,8 +60,6 @@ export interface EvenRunViewModel {
     primaryMetricValue: string;
     setActivity: (activity: ActivityType) => void;
     selectMockDestination: (destinationId: string) => void;
-    startMockSimulation: () => void;
-    clearMockSimulation: () => void;
     startOrResume: () => void;
     pause: () => void;
     stop: () => void;
@@ -73,7 +70,8 @@ export interface EvenRunViewModel {
 export const useEvenRun = (): EvenRunViewModel => {
     const bridgeRef = useRef<EvenRunBridge | null>(null);
     const sessionRef = useRef<WorkoutSession>(makeSession());
-    const simulationTimerRef = useRef<number | null>(null);
+    const geoWatchRef = useRef<number | null>(null);
+    const userOriginRef = useRef<WorkoutPoint | null>(null);
     const lastSnapshotKeyRef = useRef('');
     const [session, setSession] = useState<WorkoutSession>(() => makeSession());
     const [bridgeReady, setBridgeReady] = useState(false);
@@ -82,12 +80,16 @@ export const useEvenRun = (): EvenRunViewModel => {
     const [previewRoutePoints, setPreviewRoutePoints] = useState<WorkoutPoint[]>([]);
     const [pastRuns, setPastRuns] = useState<PastRun[]>([]);
     const [routeLoading, setRouteLoading] = useState(false);
-    const [simulationActive, setSimulationActive] = useState(false);
+    const [geoPermission, setGeoPermission] = useState<GeoPermissionState>('idle');
+    const [userOrigin, setUserOrigin] = useState<WorkoutPoint | null>(null);
     const [tickNow, setTickNow] = useState(() => Date.now());
 
-    const geoPermission: GeoPermissionState = 'idle';
-    const geoStatusMessage = 'Modo de teste ativo: rota mock sem GPS real.';
-    const mockOrigin = useMemo(() => getMockOriginPoint(), []);
+    const geoStatusMessage =
+        geoPermission === 'granted' ? 'GPS ativo' :
+        geoPermission === 'denied' ? 'GPS negado – verifique as permissões do navegador' :
+        geoPermission === 'unsupported' ? 'GPS não suportado neste dispositivo' :
+        geoPermission === 'error' ? 'Erro ao acessar o GPS' :
+        'Aguardando GPS...';
 
     const appendLog = useCallback((message: string) => {
         const timestamp = new Date().toLocaleTimeString('pt-BR', { hour12: false });
@@ -100,14 +102,13 @@ export const useEvenRun = (): EvenRunViewModel => {
     }, []);
 
     const metrics = useMemo(() => computeMetrics(session, tickNow), [session, tickNow]);
-    const mockDestinations = useMemo(() => buildMockDestinations(mockOrigin), [mockOrigin]);
-    
-    const currentPoint = session.points[session.points.length - 1] ?? mockOrigin;
+    const mockDestinations = useMemo(() => userOrigin ? buildMockDestinations(userOrigin) : [], [userOrigin]);
+    const currentPoint = session.points[session.points.length - 1] ?? userOrigin;
 
-    const clearSimulationTimer = useCallback(() => {
-        if (simulationTimerRef.current !== null) {
-            window.clearInterval(simulationTimerRef.current);
-            simulationTimerRef.current = null;
+    const clearGeoWatch = useCallback(() => {
+        if (geoWatchRef.current !== null) {
+            navigator.geolocation.clearWatch(geoWatchRef.current);
+            geoWatchRef.current = null;
         }
     }, []);
 
@@ -115,16 +116,17 @@ export const useEvenRun = (): EvenRunViewModel => {
         destination: MockDestination,
         activity: ActivityType,
     ): Promise<WorkoutPoint[]> => {
+        const origin = userOriginRef.current ?? getMockOriginPoint();
         setRouteLoading(true);
         try {
-            const route = await fetchStreetRoute(activity, mockOrigin, destination);
+            const route = await fetchStreetRoute(activity, origin, destination);
             setPreviewRoutePoints(route);
             appendLog(`[Route] loaded ${route.length} points via streets`);
             return route;
         } finally {
             setRouteLoading(false);
         }
-    }, [appendLog, mockOrigin]);
+    }, [appendLog]);
 
     useEffect(() => {
         sessionRef.current = session;
@@ -136,6 +138,40 @@ export const useEvenRun = (): EvenRunViewModel => {
         }, 1000);
         return () => window.clearInterval(timer);
     }, []);
+
+    useEffect(() => {
+        userOriginRef.current = userOrigin;
+    }, [userOrigin]);
+
+    useEffect(() => {
+        if (!navigator.geolocation) {
+            setGeoPermission('unsupported');
+            appendLog('[GPS] geolocation não suportado');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const point: WorkoutPoint = {
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    accuracy: pos.coords.accuracy,
+                    timestamp: pos.timestamp,
+                    altitude: pos.coords.altitude,
+                    speedMps: pos.coords.speed,
+                };
+                userOriginRef.current = point;
+                setUserOrigin(point);
+                setGeoPermission('granted');
+                appendLog(`[GPS] origem: ${point.lat.toFixed(5)},${point.lng.toFixed(5)}`);
+            },
+            (err) => {
+                const state: GeoPermissionState = err.code === err.PERMISSION_DENIED ? 'denied' : 'error';
+                setGeoPermission(state);
+                appendLog(`[GPS] erro: ${err.message}`);
+            },
+            { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 },
+        );
+    }, [appendLog]);
 
     const setActivity = useCallback((activity: ActivityType) => {
         const current = sessionRef.current;
@@ -149,85 +185,34 @@ export const useEvenRun = (): EvenRunViewModel => {
         appendLog(`[Mock] destination=${destinationId}`);
     }, [appendLog]);
 
-    const clearMockSimulation = useCallback(() => {
-        clearSimulationTimer();
-        setSimulationActive(false);
-        setPreviewRoutePoints([]);
-        setRouteLoading(false);
-        updateSession(makeSession(sessionRef.current.activity));
-        appendLog('[Mock] simulation cleared');
-    }, [appendLog, clearSimulationTimer, updateSession]);
-
-    const startMockSimulation = useCallback(() => {
-        const cafeDestination = mockDestinations.find(d => d.id === 'cafe');
-        if (!cafeDestination) {
-            appendLog('[Mock] cafe destination not found');
+    const startGeoWatch = useCallback(() => {
+        if (!navigator.geolocation) {
+            appendLog('[GPS] geolocation não suportado');
             return;
         }
-
-        void (async () => {
-            try {
-                clearSimulationTimer();
-                const route =
-                    previewRoutePoints.length >= 2
-                        ? previewRoutePoints
-                        : await loadPreviewRoute(cafeDestination, sessionRef.current.activity);
-
-                if (route.length < 2) {
-                    appendLog('[Mock] route unavailable');
-                    return;
+        clearGeoWatch();
+        geoWatchRef.current = navigator.geolocation.watchPosition(
+            (pos) => {
+                const point: WorkoutPoint = {
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    accuracy: pos.coords.accuracy,
+                    timestamp: pos.timestamp,
+                    altitude: pos.coords.altitude,
+                    speedMps: pos.coords.speed,
+                };
+                const current = sessionRef.current;
+                if (current.status !== 'tracking') return;
+                const lastPoint = current.points[current.points.length - 1];
+                if (shouldAcceptPoint(lastPoint, point)) {
+                    updateSession({ ...current, points: [...current.points, point] });
                 }
-
-                const startedAt = Date.now();
-                let index = 1;
-
-                setSimulationActive(true);
-                updateSession({
-                    ...makeSession(sessionRef.current.activity),
-                    status: 'tracking',
-                    startedAt,
-                    points: [route[0]!],
-                });
-                appendLog(`[Mock] simulating to ${cafeDestination.label}`);
-
-                simulationTimerRef.current = window.setInterval(() => {
-                    const current = sessionRef.current;
-
-                    if (current.status === 'paused') return;
-
-                    if (current.status !== 'tracking') {
-                        clearSimulationTimer();
-                        setSimulationActive(false);
-                        return;
-                    }
-
-                    if (index >= route.length) {
-                        clearSimulationTimer();
-                        setSimulationActive(false);
-                        updateSession({
-                            ...current,
-                            status: 'finished',
-                            finishedAt: Date.now(),
-                            pausedAt: null,
-                        });
-                        appendLog('[Mock] destination reached');
-                        return;
-                    }
-
-                    updateSession({
-                        ...current,
-                        points: [...current.points, route[index]!],
-                    });
-                    index += 1;
-                }, MOCK_ROUTE_INTERVAL_MS);
-            } catch (error) {
-                setSimulationActive(false);
-                appendLog(
-                    `[Route] failed: ${error instanceof Error ? error.message : String(error)}`,
-                );
-            }
-        })();
-    }, [appendLog, clearSimulationTimer, loadPreviewRoute, previewRoutePoints, mockDestinations, updateSession]);
+            },
+            (err) => appendLog(`[GPS] watch error: ${err.message}`),
+            { enableHighAccuracy: true, timeout: 10_000, maximumAge: 0 },
+        );
+        appendLog('[GPS] watching position');
+    }, [appendLog, clearGeoWatch, updateSession]);
 
     const startOrResume = useCallback(() => {
         const current = sessionRef.current;
@@ -241,23 +226,35 @@ export const useEvenRun = (): EvenRunViewModel => {
                 pausedAt: null,
                 pausedTotalMs: current.pausedTotalMs + (now - pausedAt),
             });
+            startGeoWatch();
             appendLog('[Session] resumed');
             return;
         }
 
-        startMockSimulation();
-    }, [appendLog, startMockSimulation, updateSession]);
+        if (current.status === 'ready') {
+            const origin = userOriginRef.current;
+            updateSession({
+                ...makeSession(current.activity),
+                status: 'tracking',
+                startedAt: now,
+                points: origin ? [origin] : [],
+            });
+            startGeoWatch();
+            appendLog('[Session] started');
+        }
+    }, [appendLog, startGeoWatch, updateSession]);
 
     const pause = useCallback(() => {
         const current = sessionRef.current;
         if (current.status !== 'tracking') return;
+        clearGeoWatch();
         updateSession({
             ...current,
             status: 'paused',
             pausedAt: Date.now(),
         });
         appendLog('[Session] paused');
-    }, [appendLog, updateSession]);
+    }, [appendLog, clearGeoWatch, updateSession]);
 
     const addLap = useCallback(() => {
         const current = sessionRef.current;
@@ -273,8 +270,7 @@ export const useEvenRun = (): EvenRunViewModel => {
         const current = sessionRef.current;
         if (current.status !== 'tracking' && current.status !== 'paused') return;
 
-        clearSimulationTimer();
-        setSimulationActive(false);
+        clearGeoWatch();
 
         const now = Date.now();
         const extraPause =
@@ -307,14 +303,13 @@ export const useEvenRun = (): EvenRunViewModel => {
                 reader.readAsDataURL(blob);
             }).catch(() => appendLog('[History] preview generation failed'));
         }
-    }, [appendLog, clearSimulationTimer, updateSession]);
+    }, [appendLog, clearGeoWatch, updateSession]);
 
     const reset = useCallback(() => {
-        clearSimulationTimer();
-        setSimulationActive(false);
+        clearGeoWatch();
         updateSession(makeSession(sessionRef.current.activity));
         appendLog('[Session] reset');
-    }, [appendLog, clearSimulationTimer, updateSession]);
+    }, [appendLog, clearGeoWatch, updateSession]);
 
     const handleBridgeAction = useCallback((action: BridgeAction) => {
         const current = sessionRef.current;
@@ -386,18 +381,19 @@ export const useEvenRun = (): EvenRunViewModel => {
     }, [appendLog]);
 
     useEffect(() => {
+        if (!userOrigin) return;
         const cafeDestination = mockDestinations.find(d => d.id === 'cafe');
         if (!cafeDestination) {
             setPreviewRoutePoints([]);
             setRouteLoading(false);
             return;
         }
-        if (simulationActive || session.status === 'tracking' || session.status === 'paused') return;
+        if (session.status === 'tracking' || session.status === 'paused') return;
 
         let cancelled = false;
         setRouteLoading(true);
 
-        fetchStreetRoute(session.activity, mockOrigin, cafeDestination)
+        fetchStreetRoute(session.activity, userOrigin, cafeDestination)
             .then((route) => {
                 if (cancelled) return;
                 setPreviewRoutePoints(route);
@@ -417,7 +413,7 @@ export const useEvenRun = (): EvenRunViewModel => {
         return () => {
             cancelled = true;
         };
-    }, [appendLog, mockOrigin, mockDestinations, session.activity, session.status, simulationActive]);
+    }, [appendLog, userOrigin, mockDestinations, session.activity, session.status]);
 
     useEffect(() => {
         if (!bridgeReady) return;
@@ -495,7 +491,6 @@ export const useEvenRun = (): EvenRunViewModel => {
         previewRoutePoints,
         pastRuns,
         routeLoading,
-        simulationActive,
         activityLabel: activityLabel(session.activity),
         activityShortLabel: activityShortLabel(session.activity),
         distanceLabel: formatDistance(metrics.distanceMeters),
@@ -504,8 +499,6 @@ export const useEvenRun = (): EvenRunViewModel => {
         primaryMetricValue: formatPrimaryMetric(session.activity, metrics),
         setActivity,
         selectMockDestination,
-        startMockSimulation,
-        clearMockSimulation,
         startOrResume,
         pause,
         stop,

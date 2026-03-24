@@ -49,15 +49,12 @@ export function EvenRunApp() {
         previewRoutePoints,
         pastRuns,
         routeLoading,
-        simulationActive,
         activityShortLabel,
         distanceLabel,
         durationLabel,
         primaryMetricLabel,
         primaryMetricValue,
         setActivity,
-        startMockSimulation,
-        clearMockSimulation,
         startOrResume,
         pause,
         stop,
@@ -133,7 +130,7 @@ export function EvenRunApp() {
                     </section>
 
                     <section className="section">
-                        <h3 className="section-title">Mapa (Simulação Cafe)</h3>
+                        <h3 className="section-title">Mapa</h3>
 
                         <InfoCard>
                             <EvenRunMap
@@ -143,59 +140,62 @@ export function EvenRunApp() {
                                 destinations={mockDestinations}
                                 selectedDestinationId={selectedDestinationId}
                             />
-                            <div className="button-group map-actions">
-                                <button
-                                    className="primary-button"
-                                    type="button"
-                                    onClick={startMockSimulation}
-                                    disabled={simulationActive || routeLoading}
-                                >
-                                    {simulationActive
-                                        ? 'Simulando...'
-                                        : routeLoading
-                                            ? 'Carregando rota...'
-                                            : 'Forçar Início Rota Fake'}
-                                </button>
-                                <button className="secondary-button" type="button" onClick={clearMockSimulation}>
-                                    Limpar Rota
-                                </button>
-                            </div>
+                            {routeLoading && (
+                                <p style={{ textAlign: 'center', fontSize: '12px', margin: '8px 0 0' }}>
+                                    Carregando prévia da rota...
+                                </p>
+                            )}
                         </InfoCard>
                     </section>
 
-                    {/* <section className="section">
-                        <h3 className="section-title">Controles Manuais</h3>
+                    <section className="section">
+                        <h3 className="section-title">Controles</h3>
 
                         <InfoCard>
                             <div className="button-group">
                                 {session.status === 'finished' ? (
-                                    <>
-                                        <button className="primary-button" type="button" onClick={reset}>
-                                            New
-                                        </button>
-                                        <button className="secondary-button" type="button">
-                                            Resume (Review)
-                                        </button>
-                                    </>
+                                    <button className="primary-button" type="button" onClick={reset}>
+                                        Nova atividade
+                                    </button>
                                 ) : (
                                     <>
-                                        <button className="primary-button" type="button" onClick={startOrResume}>
-                                            Start / Resume
+                                        <button
+                                            className="primary-button"
+                                            type="button"
+                                            onClick={startOrResume}
+                                            disabled={session.status === 'tracking' || routeLoading}
+                                        >
+                                            {session.status === 'paused' ? 'Retomar' : 'Iniciar'}
                                         </button>
-                                        <button className="secondary-button" type="button" onClick={pause}>
-                                            Pause
+                                        <button
+                                            className="secondary-button"
+                                            type="button"
+                                            onClick={pause}
+                                            disabled={session.status !== 'tracking'}
+                                        >
+                                            Pausar
                                         </button>
-                                        <button className="secondary-button" type="button" onClick={addLap}>
-                                            Add Lap
+                                        <button
+                                            className="secondary-button"
+                                            type="button"
+                                            onClick={addLap}
+                                            disabled={session.status !== 'tracking'}
+                                        >
+                                            Lap
                                         </button>
-                                        <button className="secondary-button" type="button" onClick={stop}>
-                                            Stop
+                                        <button
+                                            className="secondary-button"
+                                            type="button"
+                                            onClick={stop}
+                                            disabled={session.status !== 'tracking' && session.status !== 'paused'}
+                                        >
+                                            Parar
                                         </button>
                                     </>
                                 )}
                             </div>
                         </InfoCard>
-                    </section> */}
+                    </section>
                 </>
             )}
 

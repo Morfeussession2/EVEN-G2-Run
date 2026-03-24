@@ -4,9 +4,9 @@ import type { MockDestination, WorkoutPoint } from './types';
 const buildBounds = (
     points: Array<{ lat: number; lng: number }>,
     destinations: MockDestination[],
-): [number, number, number, number] => {
+): [number, number, number, number] | null => {
     if (points.length === 0 && destinations.length === 0) {
-        return [-46.6433, -23.5605, -46.6233, -23.5405];
+        return null;
     }
 
     const seedLat = points[0]?.lat ?? destinations[0]!.lat;
@@ -88,9 +88,19 @@ export function EvenRunMap({
         () => normalizeCoordinates(destinations, destinations).split(' ').filter(Boolean),
         [destinations],
     );
-    const iframeSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bounds
-        .map((value) => value.toFixed(6))
-        .join('%2C')}&layer=mapnik`;
+    const iframeSrc = bounds
+        ? `https://www.openstreetmap.org/export/embed.html?bbox=${bounds
+            .map((value) => value.toFixed(6))
+            .join('%2C')}&layer=mapnik`
+        : null;
+
+    if (!iframeSrc) {
+        return (
+            <div className="even-run-map even-run-map--waiting">
+                <p>Aguardando localização GPS...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="even-run-map">
