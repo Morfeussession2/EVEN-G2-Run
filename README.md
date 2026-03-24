@@ -1,6 +1,6 @@
 # Even Run
 
-App independente para Even G2, separado do Tamagotchi.
+App independente para Even G2.
 
 ## O que ja esta aqui
 
@@ -31,3 +31,4 @@ mini-mapa por conta propria no oculos.
 1. Copiar a pasta `Even-run`
 2. Rodar `npm install`
 3. Usar `npm run dev` ou `npm run build`
+4. Usar 'npx @evenrealities/evenhub-simulator URL_DO_SERVIDOR            '
