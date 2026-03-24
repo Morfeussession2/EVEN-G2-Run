@@ -44,6 +44,7 @@ export function EvenRunApp() {
         debugLogs,
         geoStatusMessage,
         currentPoint,
+        userOrigin,
         mockDestinations,
         selectedDestinationId,
         previewRoutePoints,
@@ -136,6 +137,7 @@ export function EvenRunApp() {
                             <EvenRunMap
                                 points={session.points}
                                 currentPoint={currentPoint}
+                                stableOrigin={userOrigin}
                                 previewPoints={previewRoutePoints}
                                 destinations={mockDestinations}
                                 selectedDestinationId={selectedDestinationId}

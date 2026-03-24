@@ -46,6 +46,7 @@ export interface EvenRunViewModel {
     debugLogs: string[];
     geoPermission: GeoPermissionState;
     geoStatusMessage: string;
+    userOrigin: WorkoutPoint | null;
     currentPoint: WorkoutPoint | null;
     mockDestinations: MockDestination[];
     selectedDestinationId: string | null;
@@ -486,6 +487,7 @@ export const useEvenRun = (): EvenRunViewModel => {
         geoPermission,
         geoStatusMessage,
         currentPoint,
+        userOrigin,
         mockDestinations,
         selectedDestinationId,
         previewRoutePoints,
