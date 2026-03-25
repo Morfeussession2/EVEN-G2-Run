@@ -43,7 +43,7 @@ const writeChunk = (type: string, data: Uint8Array): Uint8Array => {
     return chunk;
 };
 
-export const encodeGrayscalePng = (
+export const encodePngRGBA  = (
     width: number,
     height: number,
     grayscaleData: Uint8Array,

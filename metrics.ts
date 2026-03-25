@@ -40,14 +40,24 @@ export const shouldAcceptPoint = (
     previousPoint: WorkoutPoint | undefined,
     nextPoint: WorkoutPoint,
 ): boolean => {
-    if (nextPoint.accuracy > 65) return false;
+    // SEMPRE aceitar o primeiro ponto, independente da accuracy
     if (!previousPoint) return true;
 
     const elapsedMs = nextPoint.timestamp - previousPoint.timestamp;
     if (elapsedMs <= 0) return false;
 
     const distanceMeters = haversineDistanceMeters(previousPoint, nextPoint);
-    if (distanceMeters < 2 && elapsedMs < 4_000) return false;
+    
+    // Se accuracy é muito ruim (> 1000m), provavelmente é simulador - ignorar check de accuracy
+    const isSimulator = nextPoint.accuracy > 1000;
+    
+    if (!isSimulator) {
+        // Para dados reais: rejeitar se accuracy é péssima
+        if (nextPoint.accuracy > 150) return false;
+    }
+    
+    // Aceitar se se moveu 1m+ OU esperou 5s+ (sem movimento)
+    if (distanceMeters < 1 && elapsedMs < 5_000) return false;
 
     return true;
 };

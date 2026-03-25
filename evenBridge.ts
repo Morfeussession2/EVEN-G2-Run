@@ -132,10 +132,10 @@ export class EvenRunBridge {
 
     private getLayout() {
         const isSelecting = this.displayMode === 'selecting_activity';
-        const showSnapshot = this.displayMode === 'summary';
+        const showImage = this.displayMode === 'summary'; // Mostrar imagem APENAS em paused/finished
         const listDims = getListPositionAndSize(isSelecting);
         return {
-            containerTotalNum: isSelecting ? 1 : (showSnapshot ? 3 : 2),
+            containerTotalNum: isSelecting ? 1 : (showImage ? 3 : 2),
             textObject: isSelecting ? [] : [
                 new TextContainerProperty({
                     containerID: 2,
@@ -165,7 +165,7 @@ export class EvenRunBridge {
                     }),
                 }),
             ],
-            imageObject: showSnapshot
+            imageObject: showImage
                 ? [
                     new ImageContainerProperty({
                         containerID: 1,
@@ -298,7 +298,7 @@ export class EvenRunBridge {
     }
 
     async pushRouteImage(imageData: number[]): Promise<boolean> {
-        if (!this.bridge || !this.pageCreated || this.displayMode !== 'summary') return false;
+        if (!this.bridge || !this.pageCreated) return false;
 
         const run = async (): Promise<unknown> => {
             if (!this.bridge) return false;

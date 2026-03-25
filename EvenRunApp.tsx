@@ -44,20 +44,14 @@ export function EvenRunApp() {
         debugLogs,
         geoStatusMessage,
         currentPoint,
-        mockDestinations,
-        selectedDestinationId,
         previewRoutePoints,
         pastRuns,
-        routeLoading,
-        simulationActive,
         activityShortLabel,
         distanceLabel,
         durationLabel,
         primaryMetricLabel,
         primaryMetricValue,
         setActivity,
-        startMockSimulation,
-        clearMockSimulation,
         startOrResume,
         pause,
         stop,
@@ -133,33 +127,14 @@ export function EvenRunApp() {
                     </section>
 
                     <section className="section">
-                        <h3 className="section-title">Mapa (Simulação Cafe)</h3>
+                        <h3 className="section-title">Mapa</h3>
 
                         <InfoCard>
                             <EvenRunMap
                                 points={session.points}
                                 currentPoint={currentPoint}
                                 previewPoints={previewRoutePoints}
-                                destinations={mockDestinations}
-                                selectedDestinationId={selectedDestinationId}
                             />
-                            <div className="button-group map-actions">
-                                <button
-                                    className="primary-button"
-                                    type="button"
-                                    onClick={startMockSimulation}
-                                    disabled={simulationActive || routeLoading}
-                                >
-                                    {simulationActive
-                                        ? 'Simulando...'
-                                        : routeLoading
-                                            ? 'Carregando rota...'
-                                            : 'Forçar Início Rota Fake'}
-                                </button>
-                                <button className="secondary-button" type="button" onClick={clearMockSimulation}>
-                                    Limpar Rota
-                                </button>
-                            </div>
                         </InfoCard>
                     </section>
 
