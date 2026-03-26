@@ -70,7 +70,7 @@ export const useEvenRun = (): EvenRunViewModel => {
     const [session, setSession] = useState<WorkoutSession>(() => makeSession());
     const [bridgeReady, setBridgeReady] = useState(false);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
-    const [previewRoutePoints, setPreviewRoutePoints] = useState<WorkoutPoint[]>([]);
+    const previewRoutePoints: WorkoutPoint[] = [];
     const [pastRuns, setPastRuns] = useState<PastRun[]>([]);
     const [tickNow, setTickNow] = useState(() => Date.now());
 
@@ -159,6 +159,26 @@ export const useEvenRun = (): EvenRunViewModel => {
         appendLog(`[Session] started - GPS tracking ativo com ponto inicial`);
     }, [appendLog, updateSession, userLocation, mockOrigin]);
 
+    const pushRouteToWearable = useCallback(async (points: WorkoutPoint[], label: string) => {
+        if (!bridgeRef.current || points.length < 2) return;
+        
+        try {
+            appendLog(`[Map] rendering route (${label})`);
+            const pngBytes = await renderRoutePreviewPng(points, ROUTE_WIDTH, ROUTE_HEIGHT);
+            
+            const pushed = await bridgeRef.current.pushRouteImage(Array.from(pngBytes));
+            if (pushed) {
+                appendLog(`[Map] ✅ route sent to wearable (${label})`);
+            } else {
+                appendLog(`[Map] route push skipped`);
+            }
+        } catch (error) {
+            if (error instanceof Error) {
+                appendLog(`[Map] ❌ failed to render/push route: ${error.message}`);
+            }
+        }
+    }, [appendLog, bridgeRef]);
+
     const pause = useCallback(() => {
         // Esta função não é mais usada - pause é feito via startOrResume
         const current = sessionRef.current;
@@ -170,6 +190,20 @@ export const useEvenRun = (): EvenRunViewModel => {
         });
         appendLog('[Session] paused');
     }, [appendLog, updateSession]);
+
+    // Renderizar mapa quando pausar
+    useEffect(() => {
+        if (session.status === 'paused' && session.points.length >= 2) {
+            pushRouteToWearable(session.points, 'paused');
+        }
+    }, [session.status, session.points, pushRouteToWearable]);
+
+    // Renderizar mapa quando terminar
+    useEffect(() => {
+        if (session.status === 'finished' && session.points.length >= 2) {
+            pushRouteToWearable(session.points, 'finished');
+        }
+    }, [session.status, session.points, pushRouteToWearable]);
 
     const addLap = useCallback(() => {
         const current = sessionRef.current;
@@ -386,7 +420,7 @@ export const useEvenRun = (): EvenRunViewModel => {
         const timeoutId = window.setTimeout(() => {
             const pointsToRender = session.points.length > 0 ? session.points : [currentPoint];
             renderRoutePreviewPng(pointsToRender, ROUTE_WIDTH, ROUTE_HEIGHT)
-                .then((imageData) => bridgeRef.current?.pushRouteImage(Array.from(imageData)))
+                .then((imageArray) => bridgeRef.current?.pushRouteImage(Array.from(imageArray)))
                 .then((pushed) => {
                     if (pushed) {
                         lastSnapshotKeyRef.current = mapKey;

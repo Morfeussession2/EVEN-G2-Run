@@ -50,14 +50,18 @@ export const shouldAcceptPoint = (
     
     // Se accuracy é muito ruim (> 1000m), provavelmente é simulador - ignorar check de accuracy
     const isSimulator = nextPoint.accuracy > 1000;
-    
+
     if (!isSimulator) {
         // Para dados reais: rejeitar se accuracy é péssima
         if (nextPoint.accuracy > 150) return false;
+
+        // O primeiro ponto válido após o início sempre deve ser aceito; este caso está acima.
+        // Para pontos reais, rejeitar se movimento insignificante (<1m) em menos que 5s.
+        if (distanceMeters < 1 && elapsedMs < 5_000) return false;
+    } else {
+        // No modo simulador/precisão ruim, aceitar sempre para não descartar primeiros pontos
+        return true;
     }
-    
-    // Aceitar se se moveu 1m+ OU esperou 5s+ (sem movimento)
-    if (distanceMeters < 1 && elapsedMs < 5_000) return false;
 
     return true;
 };
