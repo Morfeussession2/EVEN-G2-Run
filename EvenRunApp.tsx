@@ -122,7 +122,6 @@ export function EvenRunApp() {
                             <DetailBox label="Distância" value={distanceLabel} />
                             <DetailBox label="Tempo" value={durationLabel} />
                             <DetailBox label={primaryMetricLabel} value={primaryMetricValue} />
-                            <DetailBox label="Voltas (Laps)" value={session.laps} />
                         </div>
                     </section>
 
@@ -183,7 +182,8 @@ export function EvenRunApp() {
                             <img src={run.imageBase64} alt={`Mapa da corrida ${run.id}`} style={{ width: '100%', borderRadius: '8px' }} />
                             <div className="details-grid" style={{ marginTop: '12px' }}>
                                 <DetailBox label="Distância" value={`${(run.metrics.distanceMeters / 1000).toFixed(2)} km`} />
-                                <DetailBox label="Laps" value={run.session.laps} />
+                                <DetailBox label="Tempo" value={durationLabel} />
+                                <DetailBox label={primaryMetricLabel} value={primaryMetricValue} />
                             </div>
                         </InfoCard>
                     ))}
