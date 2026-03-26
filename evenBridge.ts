@@ -10,6 +10,7 @@ import {
     TextContainerUpgrade,
     waitForEvenAppBridge,
 } from '@evenrealities/even_hub_sdk';
+
 import { formatDistance, formatDuration, formatPrimaryMetric, primaryMetricLabel } from './metrics';
 import type { ActivityType, BridgeAction, SessionStatus, WorkoutMetrics } from './types';
 
@@ -38,46 +39,48 @@ const parseEventType = (event: any): string | number | undefined =>
     event?.jsonData?.listEvent?.eventType;
 
 const resolveListIndex = (event: any): number | undefined => {
-    const fromList = event?.listEvent?.currentSelectItemIndex;
-    const fromJsonList = event?.jsonData?.listEvent?.currentSelectItemIndex;
-    const fromRoot = event?.jsonData?.currentSelectItemIndex;
-    const value = fromList ?? fromJsonList ?? fromRoot;
+    const value =
+        event?.listEvent?.currentSelectItemIndex ??
+        event?.jsonData?.listEvent?.currentSelectItemIndex ??
+        event?.jsonData?.currentSelectItemIndex;
+
     if (value === undefined || value === null) return undefined;
+
     const parsed = typeof value === 'number' ? value : Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const resolveListName = (event: any): string | undefined => {
-    return (
-        event?.listEvent?.currentSelectItemName ??
-        event?.jsonData?.listEvent?.currentSelectItemName ??
-        event?.jsonData?.currentSelectItemName
-    );
-};
+const resolveListName = (event: any): string | undefined =>
+    event?.listEvent?.currentSelectItemName ??
+    event?.jsonData?.listEvent?.currentSelectItemName ??
+    event?.jsonData?.currentSelectItemName;
 
 const resolveAction = (index: number | undefined, name?: string): BridgeAction | null => {
     if (name) {
         const normalized = name.toUpperCase();
-        if (normalized.includes('CICLO') || normalized.includes('CICLISMO')) return 'primary';
+
+        if (normalized.includes('CICLISMO')) return 'primary';
         if (normalized.includes('CORRIDA')) return 'secondary';
         if (normalized.includes('CAMINHADA')) return 'tertiary';
+
         if (normalized.includes('START') || normalized.includes('PAUSE') || normalized.includes('NEW')) return 'primary';
-        if (normalized.includes('LAP') || normalized.includes('RESUME')) return 'secondary';
-        if (normalized.includes('STOP') || (normalized.includes('REVIEW') && !normalized.includes('NEW'))) return 'tertiary';
+        if (normalized.includes('RESUME')) return 'secondary';
+        if (normalized.includes('STOP')) return 'tertiary';
     }
-    
+
     if (index === 0) return 'primary';
     if (index === 1) return 'secondary';
     if (index === 2) return 'tertiary';
+
     return null;
 };
 
-const getLabels = (status: SessionStatus): [string, string, string] => {
+const getLabels = (status: SessionStatus): string[] => {
     if (status === 'selecting_activity') return ['CICLISMO', 'CORRIDA', 'CAMINHADA'];
-    if (status === 'tracking') return ['PAUSE', 'LAP', 'STOP'];
-    if (status === 'paused') return ['START', 'LAP', 'STOP'];
-    if (status === 'finished') return ['NEW', 'RESUME', ''];
-    return ['START', 'LAP', 'STOP'];
+    if (status === 'tracking') return ['PAUSE', 'STOP'];
+    if (status === 'paused') return ['START', 'STOP'];
+    if (status === 'finished') return ['NEW', 'RESUME'];
+    return ['START', 'STOP'];
 };
 
 const getListPositionAndSize = (isSelecting: boolean) => {
@@ -90,6 +93,7 @@ const getListPositionAndSize = (isSelecting: boolean) => {
             itemWidth: 160,
         };
     }
+
     return {
         xPosition: 18,
         yPosition: 170,
@@ -100,15 +104,13 @@ const getListPositionAndSize = (isSelecting: boolean) => {
 };
 
 const isActionsListEvent = (event: any): boolean => {
-    const byListName =
+    return (
         event?.listEvent?.containerName === 'actionsList' ||
-        event?.jsonData?.listEvent?.containerName === 'actionsList';
-    const byContainerName = event?.jsonData?.containerName === 'actionsList';
-    const byContainerId =
+        event?.jsonData?.listEvent?.containerName === 'actionsList' ||
+        event?.jsonData?.containerName === 'actionsList' ||
         event?.listEvent?.containerID === 3 ||
-        event?.jsonData?.listEvent?.containerID === 3 ||
-        event?.jsonData?.containerID === 3;
-    return Boolean(byListName || byContainerName || byContainerId);
+        event?.jsonData?.containerID === 3
+    );
 };
 
 export class EvenRunBridge {
@@ -116,26 +118,23 @@ export class EvenRunBridge {
     private pageCreated = false;
     private debugLog: DebugLogger = () => {};
     private imageQueue: Promise<boolean> = Promise.resolve(true);
-    private actionLabels: [string, string, string] = ['CICLISMO', 'CORRIDA', 'CAMINHADA'];
+    private actionLabels: string[] = ['CICLISMO', 'CORRIDA', 'CAMINHADA'];
     private displayMode: DisplayMode | 'selecting_activity' = 'selecting_activity';
     private currentSelectedIndex: number = 0;
-    private lastRebuildTime: number = 0;
-    private isRebuilding: boolean = false;
 
     private log(message: string): void {
         const line = `[EvenRunBridge] ${message}`;
         this.debugLog(line);
-        if (/failed|timeout/i.test(message)) {
-            console.error(line);
-        }
     }
 
     private getLayout() {
         const isSelecting = this.displayMode === 'selecting_activity';
-        const showImage = this.displayMode === 'summary'; // Mostrar imagem APENAS em paused/finished
+        const showImage = this.displayMode === 'summary';
         const listDims = getListPositionAndSize(isSelecting);
+
         return {
             containerTotalNum: isSelecting ? 1 : (showImage ? 3 : 2),
+
             textObject: isSelecting ? [] : [
                 new TextContainerProperty({
                     containerID: 2,
@@ -145,9 +144,10 @@ export class EvenRunBridge {
                     width: 540,
                     height: 40,
                     isEventCapture: 0,
-                    content: 'DIST: --   TIME: --   LAPS: 0   RITM: --',
+                    content: 'DIST: --   TIME: --   RITM: --',
                 }),
             ],
+
             listObject: [
                 new ListContainerProperty({
                     containerID: 3,
@@ -158,13 +158,14 @@ export class EvenRunBridge {
                     height: listDims.height,
                     isEventCapture: 1,
                     itemContainer: new ListItemContainerProperty({
-                        itemCount: 3,
+                        itemCount: this.actionLabels.length,
                         itemWidth: listDims.itemWidth,
                         itemName: [...this.actionLabels],
                         isItemSelectBorderEn: 1,
                     }),
                 }),
             ],
+
             imageObject: showImage
                 ? [
                     new ImageContainerProperty({
@@ -185,138 +186,84 @@ export class EvenRunBridge {
         this.pageCreated = false;
 
         try {
-            const bridgePromise = waitForEvenAppBridge();
-            const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('waitForEvenAppBridge timeout (8s)')), 8000);
-            });
-            this.bridge = await Promise.race([bridgePromise, timeoutPromise]);
-            this.log('waitForEvenAppBridge resolved');
+            this.bridge = await waitForEvenAppBridge();
 
             const layout = this.getLayout();
+
             const createResult = await this.bridge.createStartUpPageContainer(
                 new CreateStartUpPageContainer(layout),
             );
-            this.log(`createStartUpPageContainer result=${String(createResult)}`);
 
             if (createResult !== 0) {
-                const rebuilt = await this.bridge.rebuildPageContainer(
+                await this.bridge.rebuildPageContainer(
                     new RebuildPageContainer(layout),
                 );
-                this.log(`rebuildPageContainer result=${String(rebuilt)}`);
-                if (!rebuilt) return false;
             }
 
             this.pageCreated = true;
+
             this.bridge.onEvenHubEvent((event: any) => {
-                if (this.isRebuilding) {
-                    this.log('Ignored event during layout rebuild');
-                    return;
-                }
-                
                 const eventType = parseEventType(event);
-                const listIndex = resolveListIndex(event);
-                const listName = resolveListName(event);
-                
-                if (listIndex !== undefined) {
-                    this.currentSelectedIndex = listIndex;
-                } else if (!listName) {
-                    // Manual tracking for UP/DOWN events if simulator lacks index and name
-                    const typeStr = String(eventType).toUpperCase();
-                    if (eventType === 1 || typeStr.includes('UP') || typeStr.includes('BACK')) {
-                        this.currentSelectedIndex = Math.max(0, this.currentSelectedIndex - 1);
-                    } else if (eventType === 2 || typeStr.includes('DOWN') || typeStr.includes('FORWARD')) {
-                        this.currentSelectedIndex = Math.min(this.actionLabels.length - 1, this.currentSelectedIndex + 1);
-                    }
-                }
 
                 if (DOUBLE_CLICK_EVENTS.has(eventType)) {
-                    if (Date.now() - this.lastRebuildTime < 500) return;
                     onAction('double_click');
                     return;
                 }
-                
-                const isUndefinedListEvent = (eventType === undefined || eventType === null) && isActionsListEvent(event);
-                if (!CLICK_EVENTS.has(eventType) && !isUndefinedListEvent) {
-                    // Ignore non-click events
-                    return;
-                }
 
-                if (Date.now() - this.lastRebuildTime < 500) {
-                    this.log('Ignored phantom click shortly after rebuild');
-                    return;
-                }
+                const isClick =
+                    CLICK_EVENTS.has(eventType) ||
+                    ((eventType === undefined || eventType === null) && isActionsListEvent(event));
 
-                const actionIndex = listIndex ?? this.currentSelectedIndex;
-                const finalAction = resolveAction(actionIndex, listName) ?? (listName ? null : 'primary');
-                
-                this.log(`Extracted list click: index=${actionIndex}, name=${String(listName)}, finalAction=${String(finalAction)}`);
-                if (finalAction) {
-                    onAction(finalAction);
+                if (!isClick) return;
+
+                const index = resolveListIndex(event) ?? this.currentSelectedIndex;
+                const name = resolveListName(event);
+
+                const action = resolveAction(index, name);
+
+                if (action) {
+                    onAction(action);
                 }
             });
 
             return true;
-        } catch (error) {
-            this.log(`init failed: ${(error as Error).message}`);
+        } catch {
             this.bridge = null;
             this.pageCreated = false;
             return false;
         }
     }
 
-    async syncActionLabels(status: SessionStatus, _activity?: any): Promise<void> {
+    async syncActionLabels(status: SessionStatus): Promise<void> {
         if (!this.bridge || !this.pageCreated) return;
-        const nextLabels = getLabels(status);
-        const nextMode: DisplayMode | 'selecting_activity' =
-            status === 'selecting_activity' ? 'selecting_activity' :
-            (status === 'paused' || status === 'finished' ? 'summary' : 'live');
-        const labelsChanged = this.actionLabels.join('|') !== nextLabels.join('|');
-        const modeChanged = this.displayMode !== nextMode;
-        if (!labelsChanged && !modeChanged) return;
 
-        this.actionLabels = nextLabels;
-        this.displayMode = nextMode;
-        this.currentSelectedIndex = 0; // Reset index on layout rebuild
-        
-        this.isRebuilding = true;
-        this.lastRebuildTime = Date.now();
-        let rebuilt = false;
-        try {
-            rebuilt = await this.bridge.rebuildPageContainer(
-                new RebuildPageContainer(this.getLayout()),
-            );
-        } finally {
-            this.lastRebuildTime = Date.now();
-            this.isRebuilding = false;
-        }
+        this.actionLabels = getLabels(status);
 
-        if (!rebuilt) {
-            this.log('syncActionLabels failed');
-            return;
-        }
-        this.pageCreated = true;
+        this.displayMode =
+            status === 'selecting_activity'
+                ? 'selecting_activity'
+                : status === 'paused' || status === 'finished'
+                ? 'summary'
+                : 'live';
+
+        this.currentSelectedIndex = 0;
+
+        await this.bridge.rebuildPageContainer(
+            new RebuildPageContainer(this.getLayout()),
+        );
     }
 
     async pushRouteImage(imageData: number[]): Promise<boolean> {
         if (!this.bridge || !this.pageCreated) return false;
 
-        const run = async (): Promise<unknown> => {
-            if (!this.bridge) return false;
-            return this.bridge.updateImageRawData(
-                new ImageRawDataUpdate({
-                    containerID: 1,
-                    containerName: 'routeImg',
-                    imageData,
-                }),
-            );
-        };
-
-        const next = this.imageQueue.then(run, run);
-        this.imageQueue = next.then(
-            () => true,
-            () => true,
+        const result = await this.bridge.updateImageRawData(
+            new ImageRawDataUpdate({
+                containerID: 1,
+                containerName: 'routeImg',
+                imageData,
+            }),
         );
-        const result = await next;
+
         return result === 0 || result === true || result === 'success';
     }
 
@@ -324,7 +271,7 @@ export class EvenRunBridge {
         activity: ActivityType,
         _status: SessionStatus,
         metrics: WorkoutMetrics,
-        laps: number,
+        _laps: number,
         _gpsStatus: string,
     ): Promise<void> {
         if (!this.bridge || !this.pageCreated) return;
@@ -332,7 +279,6 @@ export class EvenRunBridge {
         const content =
             `DIST: ${formatDistance(metrics.distanceMeters)}   ` +
             `TIME: ${formatDuration(metrics.elapsedMs)}   ` +
-            `LAPS: ${laps}   ` +
             `${primaryMetricLabel(activity) === 'Velocidade' ? 'VEL:' : 'RITM:'} ${formatPrimaryMetric(activity, metrics)}`;
 
         await this.bridge.textContainerUpgrade(
@@ -346,8 +292,6 @@ export class EvenRunBridge {
 
     destroy(): void {
         if (!this.bridge) return;
-        this.bridge.shutDownPageContainer(0).catch((error: Error) => {
-            this.log(`shutDownPageContainer failed: ${error.message}`);
-        });
+        this.bridge.shutDownPageContainer(0).catch(() => {});
     }
 }

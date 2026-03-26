@@ -67,6 +67,7 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
                 speedMps: null,
             };
 
+            console.log(`📡 GPS UPDATE: lat=${latitude.toFixed(5)}, lng=${longitude.toFixed(5)}, acc=${accuracy.toFixed(0)}m`);
             setLocation(point);
             setPermission('granted');
             setStatusMessage('Localização real ativada - rastreando posição');

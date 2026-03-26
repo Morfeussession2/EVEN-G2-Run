@@ -40,28 +40,26 @@ export const shouldAcceptPoint = (
     previousPoint: WorkoutPoint | undefined,
     nextPoint: WorkoutPoint,
 ): boolean => {
-    // SEMPRE aceitar o primeiro ponto, independente da accuracy
+
+    // 🚀 FIX PRINCIPAL:
+    // Se accuracy absurda (tipo 50000), aceita SEM QUALQUER VALIDAÇÃO
+    if (nextPoint.accuracy > 1000) {
+        return true;
+    }
+
+    // Sempre aceitar o primeiro ponto
     if (!previousPoint) return true;
 
     const elapsedMs = nextPoint.timestamp - previousPoint.timestamp;
     if (elapsedMs <= 0) return false;
 
     const distanceMeters = haversineDistanceMeters(previousPoint, nextPoint);
-    
-    // Se accuracy é muito ruim (> 1000m), provavelmente é simulador - ignorar check de accuracy
-    const isSimulator = nextPoint.accuracy > 1000;
 
-    if (!isSimulator) {
-        // Para dados reais: rejeitar se accuracy é péssima
-        if (nextPoint.accuracy > 150) return false;
+    // 🚀 VALIDAÇÃO PARA GPS REAL (accuracy boa)
+    if (nextPoint.accuracy > 150) return false;
 
-        // O primeiro ponto válido após o início sempre deve ser aceito; este caso está acima.
-        // Para pontos reais, rejeitar se movimento insignificante (<1m) em menos que 5s.
-        if (distanceMeters < 1 && elapsedMs < 5_000) return false;
-    } else {
-        // No modo simulador/precisão ruim, aceitar sempre para não descartar primeiros pontos
-        return true;
-    }
+    // Evita ruído (movimento insignificante)
+    if (distanceMeters < 1 && elapsedMs < 5_000) return false;
 
     return true;
 };

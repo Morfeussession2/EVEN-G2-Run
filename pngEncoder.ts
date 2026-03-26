@@ -52,21 +52,21 @@ export const encodePngRGBA  = (
     const view = new DataView(ihdr.buffer);
     view.setUint32(0, width, false);
     view.setUint32(4, height, false);
-    ihdr[8] = 8;
-    ihdr[9] = 0;
-    ihdr[10] = 0;
-    ihdr[11] = 0;
-    ihdr[12] = 0;
+    ihdr[8] = 8; // bit depth
+    ihdr[9] = 0; // color type: grayscale
+    ihdr[10] = 0; // compression
+    ihdr[11] = 0; // filter
+    ihdr[12] = 0; // interlace
 
     const rowSize = width + 1;
     const raw = new Uint8Array(rowSize * height);
     for (let y = 0; y < height; y += 1) {
         const rowOffset = y * rowSize;
-        raw[rowOffset] = 0;
+        raw[rowOffset] = 0; // filter type
         raw.set(grayscaleData.subarray(y * width, (y + 1) * width), rowOffset + 1);
     }
 
-    const blocks: Uint8Array[] = [new Uint8Array([0x78, 0x01])];
+    const blocks: Uint8Array[] = [new Uint8Array([0x78, 0x01])]; // zlib header
     let offset = 0;
     while (offset < raw.length) {
         const len = Math.min(65535, raw.length - offset);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { renderRoutePreviewPng } from './g2RouteRenderer';
+import { renderRoutePreviewPng, renderRoutePreviewRaw } from './g2RouteRenderer';
 import { EvenRunBridge } from './evenBridge';
 import {
     activityLabel,
@@ -73,11 +73,18 @@ export const useEvenRun = (): EvenRunViewModel => {
     const previewRoutePoints: WorkoutPoint[] = [];
     const [pastRuns, setPastRuns] = useState<PastRun[]>([]);
     const [tickNow, setTickNow] = useState(() => Date.now());
+    const userLocationRef = useRef<WorkoutPoint | null>(null);
+    const gpsIntervalRef = useRef<number | null>(null);
 
     // Obter localização real do usuário (com fallback para mock)
     // Ativar watchPosition quando status for 'tracking'
     const isTracking = session.status === 'tracking';
     const { location: userLocation, permission, statusMessage } = useUserLocation({ enabled: isTracking });
+    
+    // Sempre manter ref atualizada com a localização mais recente
+    useEffect(() => {
+        userLocationRef.current = userLocation;
+    }, [userLocation]);
     
     // Usar localização real se disponível, senão mock
     const mockOrigin: WorkoutPoint = userLocation ?? getMockOriginPoint();
@@ -257,6 +264,59 @@ export const useEvenRun = (): EvenRunViewModel => {
         appendLog('[Session] reset');
     }, [appendLog, updateSession]);
 
+    // Capturar pontos GPS a cada EXATO 1 segundo durante tracking
+    // Usa refs para evitar reiniciar intervalo quando userLocation muda
+    useEffect(() => {
+        if (session.status !== 'tracking') {
+            if (gpsIntervalRef.current !== null) {
+                window.clearInterval(gpsIntervalRef.current);
+                gpsIntervalRef.current = null;
+            }
+            return;
+        }
+
+        // Iniciar novo intervalo apenas se ainda não existe
+        if (gpsIntervalRef.current !== null) return;
+
+        console.log('🚀 GPS INTERVAL STARTED - will run every 1 second');
+        gpsIntervalRef.current = window.setInterval(() => {
+            console.log('⏰ GPS INTERVAL TICK - checking location...');
+
+            const currentSession = sessionRef.current;
+            if (currentSession.status !== 'tracking') return;
+
+            const currentLocation = userLocationRef.current;
+            if (!currentLocation) {
+                console.log('❌ No location available in ref');
+                return;
+            }
+
+            console.log(`📍 Current location: lat=${currentLocation.lat.toFixed(5)}, lng=${currentLocation.lng.toFixed(5)}, acc=${currentLocation.accuracy.toFixed(0)}m`);
+
+            const lastPoint = currentSession.points[currentSession.points.length - 1];
+            const shouldAccept = shouldAcceptPoint(lastPoint, currentLocation);
+
+            if (shouldAccept) {
+                const newPoints = [...currentSession.points, currentLocation];
+                const logMsg = `[GPS] ✅ ponto ${newPoints.length} aceito: lat=${currentLocation.lat.toFixed(5)}, lng=${currentLocation.lng.toFixed(5)}, acc=${currentLocation.accuracy.toFixed(0)}m`;
+                appendLog(logMsg);
+                console.log(`🗺️ ${logMsg}`);
+                sessionRef.current = { ...currentSession, points: newPoints };
+                setSession(sessionRef.current);
+            } else {
+                console.log(`❌ Point rejected: last_acc=${lastPoint?.accuracy.toFixed(0) ?? 'N/A'}m, new_acc=${currentLocation.accuracy.toFixed(0)}m`);
+            }
+        }, 1000);
+
+        return () => {
+            if (gpsIntervalRef.current !== null) {
+                console.log('🛑 GPS INTERVAL STOPPED');
+                window.clearInterval(gpsIntervalRef.current);
+                gpsIntervalRef.current = null;
+            }
+        };
+    }, [session.status, appendLog]);
+
     const handleBridgeAction = useCallback((action: BridgeAction) => {
         const current = sessionRef.current;
         const now = Date.now();
@@ -306,7 +366,7 @@ export const useEvenRun = (): EvenRunViewModel => {
         if (action === 'secondary') {
             // SECONDARY button: LAP (tracking/paused only)
             if (current.status === 'tracking' || current.status === 'paused') {
-                addLap();
+                stop();
             }
             return;
         }
@@ -351,31 +411,6 @@ export const useEvenRun = (): EvenRunViewModel => {
         }
     }, [userLocation, permission, appendLog]);
 
-    // Quando há localização real durante tracking, adicionar à sessão
-    useEffect(() => {
-        if (!userLocation || session.status !== 'tracking') return;
-        if (!permission || permission !== 'granted') return;
-
-        const currentSession = sessionRef.current;
-        if (currentSession.status !== 'tracking') return;
-        
-        const lastPoint = currentSession.points[currentSession.points.length - 1];
-        
-        // Validar se ponto deve ser aceito (evita pontos muito próximos ou com accuracy ruim)
-        const shouldAccept = shouldAcceptPoint(lastPoint, userLocation);
-        
-        if (shouldAccept) {
-            const newPoints = [...currentSession.points, userLocation];
-            appendLog(`[GPS] ✅ ponto ${newPoints.length} aceito: lat=${userLocation.lat.toFixed(5)}, lng=${userLocation.lng.toFixed(5)}, acc=${userLocation.accuracy.toFixed(0)}m`);
-            updateSession({
-                ...currentSession,
-                points: newPoints,
-            });
-        } else {
-            appendLog(`[GPS] ❌ ponto rejeitado (última: accuracy=${lastPoint?.accuracy.toFixed(0) ?? 'N/A'}m, nova: ${userLocation.accuracy.toFixed(0)}m)`);
-        }
-    }, [userLocation, session.status, permission, updateSession, appendLog]);
-
     useEffect(() => {
         if (!bridgeReady) return;
         bridgeRef.current?.syncActionLabels(session.status, session.activity).catch(() => {
@@ -419,7 +454,7 @@ export const useEvenRun = (): EvenRunViewModel => {
 
         const timeoutId = window.setTimeout(() => {
             const pointsToRender = session.points.length > 0 ? session.points : [currentPoint];
-            renderRoutePreviewPng(pointsToRender, ROUTE_WIDTH, ROUTE_HEIGHT)
+            renderRoutePreviewRaw(pointsToRender, ROUTE_WIDTH, ROUTE_HEIGHT)
                 .then((imageArray) => bridgeRef.current?.pushRouteImage(Array.from(imageArray)))
                 .then((pushed) => {
                     if (pushed) {

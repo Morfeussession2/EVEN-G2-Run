@@ -248,11 +248,11 @@ const projectRouteToViewport = (
         };
     });
 
-export const renderRoutePreviewPng = async (
+const createPreviewCanvas = async (
     points: WorkoutPoint[],
     width: number,
     height: number,
-): Promise<Uint8Array> => {
+): Promise<HTMLCanvasElement> => {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -282,6 +282,15 @@ export const renderRoutePreviewPng = async (
         paintFallback(ctx, points, width, height);
     }
 
+    return canvas;
+};
+
+const extractGrayscale = (canvas: HTMLCanvasElement): Uint8Array => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas context unavailable');
+
+    const width = canvas.width;
+    const height = canvas.height;
     const rgba = ctx.getImageData(0, 0, width, height).data;
     const gray = new Uint8Array(width * height);
     for (let index = 0; index < gray.length; index += 1) {
@@ -289,5 +298,23 @@ export const renderRoutePreviewPng = async (
         gray[index] = (rgba[offset] * 77 + rgba[offset + 1] * 151 + rgba[offset + 2] * 28) >>> 8;
     }
 
+    return gray;
+};
+
+export const renderRoutePreviewRaw = async (
+    points: WorkoutPoint[],
+    width: number,
+    height: number,
+): Promise<Uint8Array> => {
+    const canvas = await createPreviewCanvas(points, width, height);
+    return extractGrayscale(canvas);
+};
+
+export const renderRoutePreviewPng = async (
+    points: WorkoutPoint[],
+    width: number,
+    height: number,
+): Promise<Uint8Array> => {
+    const gray = await renderRoutePreviewRaw(points, width, height);
     return encodePngRGBA(width, height, gray);
 };
