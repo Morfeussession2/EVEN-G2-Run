@@ -11,7 +11,7 @@ import {
     waitForEvenAppBridge,
 } from '@evenrealities/even_hub_sdk';
 
-import { formatDistance, formatDuration, formatPrimaryMetric, primaryMetricLabel } from './metrics';
+import { formatDistance, formatDuration, formatPrimaryMetric } from './metrics';
 import type { ActivityType, BridgeAction, SessionStatus, WorkoutMetrics } from './types';
 
 type AnyBridge = Awaited<ReturnType<typeof waitForEvenAppBridge>>;
@@ -59,9 +59,9 @@ const resolveAction = (index: number | undefined, name?: string): BridgeAction |
     if (name) {
         const normalized = name.toUpperCase();
 
-        if (normalized.includes('CICLISMO')) return 'primary';
-        if (normalized.includes('CORRIDA')) return 'secondary';
-        if (normalized.includes('CAMINHADA')) return 'tertiary';
+        if (normalized.includes('BIKE')) return 'primary';
+        if (normalized.includes('RUN')) return 'secondary';
+        if (normalized.includes('WALK')) return 'tertiary';
 
         if (normalized.includes('START') || normalized.includes('PAUSE') || normalized.includes('NEW')) return 'primary';
         if (normalized.includes('RESUME')) return 'secondary';
@@ -76,7 +76,7 @@ const resolveAction = (index: number | undefined, name?: string): BridgeAction |
 };
 
 const getLabels = (status: SessionStatus): string[] => {
-    if (status === 'selecting_activity') return ['CICLISMO', 'CORRIDA', 'CAMINHADA'];
+    if (status === 'selecting_activity') return ['BIKE', 'RUN', 'WALK'];
     if (status === 'tracking') return ['PAUSE', 'STOP'];
     if (status === 'paused') return ['START', 'STOP'];
     if (status === 'finished') return ['NEW', 'RESUME'];
@@ -86,20 +86,20 @@ const getLabels = (status: SessionStatus): string[] => {
 const getListPositionAndSize = (isSelecting: boolean) => {
     if (isSelecting) {
         return {
-            xPosition: 190,
+            xPosition: 245,
             yPosition: 100,
-            width: 160,
+            width: 75,
             height: 120,
-            itemWidth: 160,
+            itemWidth: 75,
         };
     }
 
     return {
         xPosition: 18,
-        yPosition: 170,
-        width: 190,
-        height: 92,
-        itemWidth: 190,
+        yPosition: 150,
+        width: 100,
+        height: 120,
+        itemWidth: 100,
     };
 };
 
@@ -116,9 +116,9 @@ const isActionsListEvent = (event: any): boolean => {
 export class EvenRunBridge {
     private bridge: AnyBridge | null = null;
     private pageCreated = false;
-    private debugLog: DebugLogger = () => {};
-    private imageQueue: Promise<boolean> = Promise.resolve(true);
-    private actionLabels: string[] = ['CICLISMO', 'CORRIDA', 'CAMINHADA'];
+    private debugLog: DebugLogger = () => { };
+
+    private actionLabels: string[] = ['BIKE', 'RUN', 'WALK'];
     private displayMode: DisplayMode | 'selecting_activity' = 'selecting_activity';
     private currentSelectedIndex: number = 0;
 
@@ -129,22 +129,28 @@ export class EvenRunBridge {
 
     private getLayout() {
         const isSelecting = this.displayMode === 'selecting_activity';
-        const showImage = this.displayMode === 'summary';
+        const showMap = this.displayMode === 'summary';
         const listDims = getListPositionAndSize(isSelecting);
 
+        // Container allocation:
+        //  selecting: 1 (list only)
+        //  live:      4 (labelsImg + activityIcon + metricsText + list)
+        //  summary:   5 (labelsImg + activityIcon + routeMap + metricsText + list)
+        const containerTotalNum = isSelecting ? 1 : (showMap ? 5 : 4);
+
         return {
-            containerTotalNum: isSelecting ? 1 : (showImage ? 3 : 2),
+            containerTotalNum,
 
             textObject: isSelecting ? [] : [
                 new TextContainerProperty({
                     containerID: 2,
                     containerName: 'metricsText',
-                    xPosition: 18,
-                    yPosition: 14,
-                    width: 540,
-                    height: 40,
+                    xPosition: 150,
+                    yPosition: 30,   // sits below 42 px labels banner
+                    width: 288,
+                    height: 36,
                     isEventCapture: 0,
-                    content: 'DIST: --   TIME: --   RITM: --',
+                    content: '--     --     --',
                 }),
             ],
 
@@ -166,23 +172,48 @@ export class EvenRunBridge {
                 }),
             ],
 
-            imageObject: showImage
-                ? [
+            imageObject: [
+                // Container 4: labels banner (288×42) — always when not selecting
+                ...(!isSelecting ? [
+                    new ImageContainerProperty({
+                        containerID: 4,
+                        containerName: 'labelsImg',
+                        xPosition: 170,
+                        yPosition: 4,
+                        width: 288,
+                        height: 42,
+                    }),
+                ] : []),
+
+                // Container 5: activity icon (32×32) — positioned freely
+                ...(!isSelecting ? [
+                    new ImageContainerProperty({
+                        containerID: 5,
+                        containerName: 'activityIcon',
+                        xPosition: 500,
+                        yPosition: 8,
+                        width: 24,
+                        height: 24,
+                    }),
+                ] : []),
+
+                // Container 1: route map (200×100) — only in summary
+                ...(showMap ? [
                     new ImageContainerProperty({
                         containerID: 1,
                         containerName: 'routeImg',
                         xPosition: 338,
-                        yPosition: 162,
+                        yPosition: 150,
                         width: 200,
                         height: 100,
                     }),
-                ]
-                : [],
+                ] : []),
+            ],
         };
     }
 
     async init(onAction: (action: BridgeAction) => void, onDebugLog?: DebugLogger): Promise<boolean> {
-        this.debugLog = onDebugLog ?? (() => {});
+        this.debugLog = onDebugLog ?? (() => { });
         this.pageCreated = false;
 
         try {
@@ -234,7 +265,7 @@ export class EvenRunBridge {
         }
     }
 
-    async syncActionLabels(status: SessionStatus): Promise<void> {
+    async syncActionLabels(status: SessionStatus, _activity: ActivityType): Promise<void> {
         if (!this.bridge || !this.pageCreated) return;
 
         this.actionLabels = getLabels(status);
@@ -243,8 +274,8 @@ export class EvenRunBridge {
             status === 'selecting_activity'
                 ? 'selecting_activity'
                 : status === 'paused' || status === 'finished'
-                ? 'summary'
-                : 'live';
+                    ? 'summary'
+                    : 'live';
 
         this.currentSelectedIndex = 0;
 
@@ -264,7 +295,38 @@ export class EvenRunBridge {
             }),
         );
 
-        return result === 0 || result === true || result === 'success';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (result as any) === 0 || (result as any) === true || (result as any) === 'success';
+    }
+
+    async pushMetricsBanner(imageData: number[]): Promise<boolean> {
+        if (!this.bridge || !this.pageCreated) return false;
+
+        const result = await this.bridge.updateImageRawData(
+            new ImageRawDataUpdate({
+                containerID: 4,
+                containerName: 'labelsImg',
+                imageData,
+            }),
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (result as any) === 0 || (result as any) === true || (result as any) === 'success';
+    }
+
+    async pushActivityIcon(imageData: number[]): Promise<boolean> {
+        if (!this.bridge || !this.pageCreated) return false;
+
+        const result = await this.bridge.updateImageRawData(
+            new ImageRawDataUpdate({
+                containerID: 5,
+                containerName: 'activityIcon',
+                imageData,
+            }),
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (result as any) === 0 || (result as any) === true || (result as any) === 'success';
     }
 
     async pushStats(
@@ -276,10 +338,11 @@ export class EvenRunBridge {
     ): Promise<void> {
         if (!this.bridge || !this.pageCreated) return;
 
-        const content =
-            `DIST: ${formatDistance(metrics.distanceMeters)}   ` +
-            `TIME: ${formatDuration(metrics.elapsedMs)}   ` +
-            `${primaryMetricLabel(activity) === 'Velocidade' ? 'VEL:' : 'RITM:'} ${formatPrimaryMetric(activity, metrics)}`;
+        // Values row aligned to the three columns: TIME | DIST | VEL
+        const timeVal = formatDuration(metrics.elapsedMs);
+        const distVal = formatDistance(metrics.distanceMeters);
+        const velVal = formatPrimaryMetric(activity, metrics);
+        const content = `${timeVal}    ${distVal}        ${velVal}`;
 
         await this.bridge.textContainerUpgrade(
             new TextContainerUpgrade({
@@ -292,6 +355,6 @@ export class EvenRunBridge {
 
     destroy(): void {
         if (!this.bridge) return;
-        this.bridge.shutDownPageContainer(0).catch(() => {});
+        this.bridge.shutDownPageContainer(0).catch(() => { });
     }
 }

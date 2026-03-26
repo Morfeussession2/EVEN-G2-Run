@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { renderRoutePreviewPng, renderRoutePreviewRaw } from './g2RouteRenderer';
+import { renderRoutePreviewPng } from './g2RouteRenderer';
+import { renderMetricsBannerPng, renderActivityIconPng } from './g2MetricsRenderer';
 import { EvenRunBridge } from './evenBridge';
 import {
     activityLabel,
@@ -431,6 +432,24 @@ export const useEvenRun = (): EvenRunViewModel => {
         });
     }, [appendLog, bridgeReady, geoStatusMessage, metrics, session.activity, session.laps, session.status]);
 
+    // Push labels banner (Time/Distance/Rhythm text only)
+    useEffect(() => {
+        if (!bridgeReady || session.status === 'selecting_activity') return;
+
+        renderMetricsBannerPng(session.activity)
+            .then((bytes) => bridgeRef.current?.pushMetricsBanner(Array.from(bytes)))
+            .catch(() => appendLog('[Bridge] pushMetricsBanner failed'));
+    }, [appendLog, bridgeReady, session.activity, session.status]);
+
+    // Push activity icon (separate container) whenever activity changes
+    useEffect(() => {
+        if (!bridgeReady || session.status === 'selecting_activity') return;
+
+        renderActivityIconPng(session.activity)
+            .then((bytes) => bridgeRef.current?.pushActivityIcon(Array.from(bytes)))
+            .catch(() => appendLog('[Bridge] pushActivityIcon failed'));
+    }, [appendLog, bridgeReady, session.activity, session.status]);
+
     useEffect(() => {
         // Só renderizar mapa quando pausado ou parado (finished)
         const isPauseOrFinish = session.status === 'paused' || session.status === 'finished';
@@ -454,7 +473,7 @@ export const useEvenRun = (): EvenRunViewModel => {
 
         const timeoutId = window.setTimeout(() => {
             const pointsToRender = session.points.length > 0 ? session.points : [currentPoint];
-            renderRoutePreviewRaw(pointsToRender, ROUTE_WIDTH, ROUTE_HEIGHT)
+            renderRoutePreviewPng(pointsToRender, ROUTE_WIDTH, ROUTE_HEIGHT)
                 .then((imageArray) => bridgeRef.current?.pushRouteImage(Array.from(imageArray)))
                 .then((pushed) => {
                     if (pushed) {

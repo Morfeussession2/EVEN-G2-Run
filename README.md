@@ -4,7 +4,7 @@ App independente para Even G2.
 
 ## O que ja esta aqui
 
-- Escolha de atividade: corrida, ciclismo, caminhada
+- Escolha de atividade: RUN, BIKE, WALK
 - Modo de teste com origem mock e destinos mock, sem depender do GPS real
 - Metricas de distancia, tempo, ritmo/velocidade e laps
 - Mapa gratuito no browser usando embed do OpenStreetMap

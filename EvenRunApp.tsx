@@ -91,19 +91,19 @@ export function EvenRunApp() {
                     <InfoCard>
                         <div className="button-group">
                             <ActivityButton
-                                label="Ciclismo"
+                                label="BIKE"
                                 activity="ride"
                                 active={false}
                                 onSelect={() => { setActivity('ride'); }}
                             />
                             <ActivityButton
-                                label="Corrida"
+                                label="RUN"
                                 activity="run"
                                 active={false}
                                 onSelect={() => { setActivity('run'); }}
                             />
                             <ActivityButton
-                                label="Caminhada"
+                                label="WALK"
                                 activity="walk"
                                 active={false}
                                 onSelect={() => { setActivity('walk'); }}
@@ -175,11 +175,11 @@ export function EvenRunApp() {
 
             {pastRuns.length > 0 && (
                 <section className="section">
-                    <h3 className="section-title">Histórico de Corridas</h3>
+                    <h3 className="section-title">Histórico de RUNs</h3>
                     {pastRuns.map((run, idx) => (
                         <InfoCard key={run.id}>
-                            <h4 style={{ marginBottom: '8px', color: '#000000ff' }}>Corrida {pastRuns.length - idx}</h4>
-                            <img src={run.imageBase64} alt={`Mapa da corrida ${run.id}`} style={{ width: '100%', borderRadius: '8px' }} />
+                            <h4 style={{ marginBottom: '8px', color: '#000000ff' }}>RUN {pastRuns.length - idx}</h4>
+                            <img src={run.imageBase64} alt={`Mapa da RUN ${run.id}`} style={{ width: '100%', borderRadius: '8px' }} />
                             <div className="details-grid" style={{ marginTop: '12px' }}>
                                 <DetailBox label="Distância" value={`${(run.metrics.distanceMeters / 1000).toFixed(2)} km`} />
                                 <DetailBox label="Tempo" value={durationLabel} />

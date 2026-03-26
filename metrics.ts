@@ -7,9 +7,9 @@ const MOCK_ORIGIN_LNG = -46.63331;
 const toRadians = (value: number): number => (value * Math.PI) / 180;
 
 export const activityLabel = (activity: ActivityType): string => {
-    if (activity === 'run') return 'Corrida';
-    if (activity === 'ride') return 'Ciclismo';
-    return 'Caminhada';
+    if (activity === 'run') return 'RUN';
+    if (activity === 'ride') return 'BIKE';
+    return 'WALK';
 };
 
 export const activityShortLabel = (activity: ActivityType): string => {
