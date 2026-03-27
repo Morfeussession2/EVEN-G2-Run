@@ -137,7 +137,7 @@ export function EvenRunApp() {
                         </InfoCard>
                     </section>
 
-                    {/* <section className="section">
+                    <section className="section">
                         <h3 className="section-title">Controles Manuais</h3>
 
                         <InfoCard>
@@ -169,7 +169,7 @@ export function EvenRunApp() {
                                 )}
                             </div>
                         </InfoCard>
-                    </section> */}
+                    </section>
                 </>
             )}
 
