@@ -119,7 +119,7 @@ export function EvenRunMap({
                     <polyline
                         points={polyline}
                         fill="none"
-                        stroke="#ffffff" // melhor pra grayscale
+                        stroke="#00ff15" // verde neon
                         strokeWidth="3.2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -150,7 +150,7 @@ export function EvenRunMap({
                                 cx={cx}
                                 cy={cy}
                                 r="3"
-                                fill="#ffffff"
+                                fill="#00ff15"
                                 stroke="#000000"
                                 strokeWidth="1"
                             />
@@ -158,8 +158,8 @@ export function EvenRunMap({
                     })()
                 ) : (
                     <>
-                        <line x1="45" y1="50" x2="55" y2="50" stroke="#2ada07ff" strokeWidth="1" />
-                        <line x1="50" y1="45" x2="50" y2="55" stroke="#2ada07ff" strokeWidth="1" />
+                        <line x1="45" y1="50" x2="55" y2="50" stroke="#ffffffff" strokeWidth="1" />
+                        <line x1="50" y1="45" x2="50" y2="55" stroke="#ffffff" strokeWidth="1" />
                     </>
                 )}
             </svg>
