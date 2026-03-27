@@ -108,8 +108,8 @@ const isActionsListEvent = (event: any): boolean => {
         event?.listEvent?.containerName === 'actionsList' ||
         event?.jsonData?.listEvent?.containerName === 'actionsList' ||
         event?.jsonData?.containerName === 'actionsList' ||
-        event?.listEvent?.containerID === 3 ||
-        event?.jsonData?.containerID === 3
+        event?.listEvent?.containerID === 1 ||
+        event?.jsonData?.containerID === 1
     );
 };
 
@@ -156,7 +156,7 @@ export class EvenRunBridge {
 
             listObject: [
                 new ListContainerProperty({
-                    containerID: 3,
+                    containerID: 1,
                     containerName: 'actionsList',
                     xPosition: listDims.xPosition,
                     yPosition: listDims.yPosition,
@@ -173,10 +173,10 @@ export class EvenRunBridge {
             ],
 
             imageObject: [
-                // Container 4: labels banner (288×42) — always when not selecting
+                // Container 3: labels banner (288×42) — always when not selecting
                 ...(!isSelecting ? [
                     new ImageContainerProperty({
-                        containerID: 4,
+                        containerID: 3,
                         containerName: 'labelsImg',
                         xPosition: 170,
                         yPosition: 4,
@@ -185,10 +185,10 @@ export class EvenRunBridge {
                     }),
                 ] : []),
 
-                // Container 5: activity icon (32×32) — positioned freely
+                // Container 4: activity icon (32×32) — positioned freely
                 ...(!isSelecting ? [
                     new ImageContainerProperty({
-                        containerID: 5,
+                        containerID: 4,
                         containerName: 'activityIcon',
                         xPosition: 500,
                         yPosition: 8,
@@ -197,10 +197,10 @@ export class EvenRunBridge {
                     }),
                 ] : []),
 
-                // Container 1: route map (200×100) — only in summary
+                // Container 5: route map (200×100) — only in summary
                 ...(showMap ? [
                     new ImageContainerProperty({
-                        containerID: 1,
+                        containerID: 5,
                         containerName: 'routeImg',
                         xPosition: 338,
                         yPosition: 150,
@@ -289,7 +289,7 @@ export class EvenRunBridge {
 
         const result = await this.bridge.updateImageRawData(
             new ImageRawDataUpdate({
-                containerID: 1,
+                containerID: 5,
                 containerName: 'routeImg',
                 imageData,
             }),
@@ -304,7 +304,7 @@ export class EvenRunBridge {
 
         const result = await this.bridge.updateImageRawData(
             new ImageRawDataUpdate({
-                containerID: 4,
+                containerID: 3,
                 containerName: 'labelsImg',
                 imageData,
             }),
@@ -319,7 +319,7 @@ export class EvenRunBridge {
 
         const result = await this.bridge.updateImageRawData(
             new ImageRawDataUpdate({
-                containerID: 5,
+                containerID: 4,
                 containerName: 'activityIcon',
                 imageData,
             }),
