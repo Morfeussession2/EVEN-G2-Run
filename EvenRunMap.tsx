@@ -80,7 +80,7 @@ export function EvenRunMap({
     previewPoints?: WorkoutPoint[];
     onSelectDestination?: (destinationId: string) => void;
 }) {
-    const handleSelectDestination = onSelectDestination ?? (() => {});
+    const handleSelectDestination = onSelectDestination ?? (() => { });
 
     const routePoints = useMemo(() => {
         if (points && points.length > 0) return points;
@@ -158,8 +158,8 @@ export function EvenRunMap({
                     })()
                 ) : (
                     <>
-                        <line x1="45" y1="50" x2="55" y2="50" stroke="#ffffff" strokeWidth="1" />
-                        <line x1="50" y1="45" x2="50" y2="55" stroke="#ffffff" strokeWidth="1" />
+                        <line x1="45" y1="50" x2="55" y2="50" stroke="#2ada07ff" strokeWidth="1" />
+                        <line x1="50" y1="45" x2="50" y2="55" stroke="#2ada07ff" strokeWidth="1" />
                     </>
                 )}
             </svg>
