@@ -121,10 +121,15 @@ export const formatPrimaryMetric = (activity: ActivityType, metrics: WorkoutMetr
     if (activity === 'ride') {
         return metrics.avgSpeedKph > 0 ? `${metrics.avgSpeedKph.toFixed(1)} km/h` : '--';
     }
-    if (!metrics.paceSecondsPerKm) return '--';
+    // Para caminhada/corrida, mostrar "Pace" (min/km)
+    // Se estiver parado ou muito lento (> 60 min/km), mostrar tracinhos
+    if (!metrics.paceSecondsPerKm || metrics.paceSecondsPerKm > 3600) return '--';
+    
     const minutes = Math.floor(metrics.paceSecondsPerKm / 60);
     const seconds = metrics.paceSecondsPerKm % 60;
-    return `${minutes}:${String(seconds).padStart(2, '0')} min/km`;
+    
+    // Formato clássico de relógios de corrida: 05'30"
+    return `${String(minutes).padStart(2, '0')}'${String(seconds).padStart(2, '0')}"`;
 };
 
 export const getMockOriginPoint = (): WorkoutPoint => ({

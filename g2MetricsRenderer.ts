@@ -77,7 +77,7 @@ export const renderMetricsBannerPng = async (
     // Fixed x positions — tightly constrained to stay within 200px width
     ctx.fillText('Time', 0, midY);
     ctx.fillText('Distance', 80, midY);
-    ctx.fillText('Rhythm', 175, midY);
+    ctx.fillText('Pace', 175, midY);
 
     const gray = canvasToGrayscale(ctx, BANNER_WIDTH, BANNER_HEIGHT);
     return encodePngRGBA(BANNER_WIDTH, BANNER_HEIGHT, gray);
