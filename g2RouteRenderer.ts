@@ -128,9 +128,6 @@ const paintFallback = (
 ): void => {
     ctx.fillStyle = '#02070d';
     ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = '#27475f';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
     ctx.strokeStyle = '#173042';
     ctx.beginPath();
     ctx.moveTo(width / 2, 6);
@@ -270,9 +267,6 @@ const createPreviewCanvas = async (
 
             ctx.fillStyle = 'rgba(1, 6, 12, 0.18)';
             ctx.fillRect(0, 0, width, height);
-            ctx.strokeStyle = '#9fb3c2';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
 
             const projected = projectRouteToViewport(points, viewport);
             drawRoutePath(ctx, projected);

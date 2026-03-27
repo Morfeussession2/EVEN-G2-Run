@@ -117,6 +117,7 @@ export class EvenRunBridge {
     private bridge: AnyBridge | null = null;
     private pageCreated = false;
     private debugLog: DebugLogger = () => { };
+    private imageUpdateQueue: Promise<boolean> = Promise.resolve(true);
 
     private actionLabels: string[] = ['BIKE', 'RUN', 'WALK'];
     private displayMode: DisplayMode | 'selecting_activity' = 'selecting_activity';
@@ -173,15 +174,15 @@ export class EvenRunBridge {
             ],
 
             imageObject: [
-                // Container 3: labels banner (288×42) — always when not selecting
+                // Container 3: labels banner (200×42) — always when not selecting
                 ...(!isSelecting ? [
                     new ImageContainerProperty({
                         containerID: 3,
                         containerName: 'labelsImg',
-                        xPosition: 170,
-                        yPosition: 4,
-                        width: 288,
-                        height: 42,
+                        xPosition: 180, // Aligned with metricsText
+                        yPosition: 6,
+                        width: 200,
+                        height: 24, // Reduced to kill "sobra preta" over the digits
                     }),
                 ] : []),
 
@@ -284,48 +285,48 @@ export class EvenRunBridge {
         );
     }
 
+    private async enqueueImageUpdate(
+        containerID: number,
+        containerName: string,
+        imageData: number[],
+        source: string,
+    ): Promise<unknown> {
+        const run = async (): Promise<unknown> => {
+            if (!this.bridge) return false;
+            const result = await this.bridge.updateImageRawData(
+                new ImageRawDataUpdate({
+                    containerID,
+                    containerName,
+                    imageData,
+                }),
+            );
+            this.log(`${source} updateImageRawData container=${containerName} result=${String(result)}`);
+            return result;
+        };
+
+        const next = this.imageUpdateQueue.then(run, run);
+        this.imageUpdateQueue = next.then(
+            () => true,
+            () => true,
+        );
+        return next;
+    }
+
     async pushRouteImage(imageData: number[]): Promise<boolean> {
         if (!this.bridge || !this.pageCreated) return false;
-
-        const result = await this.bridge.updateImageRawData(
-            new ImageRawDataUpdate({
-                containerID: 5,
-                containerName: 'routeImg',
-                imageData,
-            }),
-        );
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = await this.enqueueImageUpdate(5, 'routeImg', imageData, 'pushRouteImage');
         return (result as any) === 0 || (result as any) === true || (result as any) === 'success';
     }
 
     async pushMetricsBanner(imageData: number[]): Promise<boolean> {
         if (!this.bridge || !this.pageCreated) return false;
-
-        const result = await this.bridge.updateImageRawData(
-            new ImageRawDataUpdate({
-                containerID: 3,
-                containerName: 'labelsImg',
-                imageData,
-            }),
-        );
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = await this.enqueueImageUpdate(3, 'labelsImg', imageData, 'pushMetricsBanner');
         return (result as any) === 0 || (result as any) === true || (result as any) === 'success';
     }
 
     async pushActivityIcon(imageData: number[]): Promise<boolean> {
         if (!this.bridge || !this.pageCreated) return false;
-
-        const result = await this.bridge.updateImageRawData(
-            new ImageRawDataUpdate({
-                containerID: 4,
-                containerName: 'activityIcon',
-                imageData,
-            }),
-        );
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = await this.enqueueImageUpdate(4, 'activityIcon', imageData, 'pushActivityIcon');
         return (result as any) === 0 || (result as any) === true || (result as any) === 'success';
     }
 

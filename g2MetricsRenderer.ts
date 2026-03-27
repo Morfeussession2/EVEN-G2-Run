@@ -10,8 +10,8 @@ const ICON_URLS: Record<ActivityType, string> = {
 
 // ── Canvas dimensions ──────────────────────────────────────────────────────
 // Labels-only banner (no icon)
-const BANNER_WIDTH = 288;
-const BANNER_HEIGHT = 10;
+const BANNER_WIDTH = 200; // SDK max supported width
+const BANNER_HEIGHT = 24; // Reduced to prevent text overlap (SDK min: 20)
 
 // Standalone icon rendered as its own image container
 const ICON_SIZE = 24;
@@ -67,17 +67,17 @@ export const renderMetricsBannerPng = async (
     ctx.fillRect(0, 0, BANNER_WIDTH, BANNER_HEIGHT);
 
     const midY = BANNER_HEIGHT / 2;
-    ctx.fillStyle = '#00ff0d21';
-    ctx.font = '14px EvenTimeBigPixel_v1.0';
+    ctx.fillStyle = '#00ff1544';
+    ctx.font = '24px EvenTimeBigPixel_v1.0';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
 
     const velLabel = activity === 'ride' ? 'Speed' : 'Rhythm';
 
-    // Fixed x positions — adjust these to fine-tune spacing
-    ctx.fillText('Time', 4, midY);
+    // Fixed x positions — tightly constrained to stay within 200px width
+    ctx.fillText('Time', 0, midY);
     ctx.fillText('Distance', 80, midY);
-    ctx.fillText('Rhythm', 180, midY);
+    ctx.fillText('Rhythm', 175, midY);
 
     const gray = canvasToGrayscale(ctx, BANNER_WIDTH, BANNER_HEIGHT);
     return encodePngRGBA(BANNER_WIDTH, BANNER_HEIGHT, gray);
