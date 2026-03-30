@@ -14,6 +14,7 @@ import {
     primaryMetricLabel,
     shouldAcceptPoint,
 } from './metrics';
+import { uploadToStrava, exchangeCodeForTokens, getStravaConfig, StravaConfig } from './stravaService';
 import { useUserLocation } from './useUserLocation';
 import type {
     ActivityType,
@@ -61,6 +62,10 @@ export interface EvenRunViewModel {
     stop: () => void;
     reset: () => void;
     addLap: () => void;
+    isSyncing: boolean;
+    syncStatus: string | null;
+    syncToStrava: () => Promise<void>;
+    stravaConfig: StravaConfig;
 }
 
 export const useEvenRun = (): EvenRunViewModel => {
@@ -74,6 +79,9 @@ export const useEvenRun = (): EvenRunViewModel => {
     const previewRoutePoints: WorkoutPoint[] = [];
     const [pastRuns, setPastRuns] = useState<PastRun[]>([]);
     const [tickNow, setTickNow] = useState(() => Date.now());
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [syncStatus, setSyncStatus] = useState<string | null>(null);
+    const [stravaConfig, setStravaConfig] = useState<StravaConfig>(() => getStravaConfig());
     const userLocationRef = useRef<WorkoutPoint | null>(null);
     const gpsIntervalRef = useRef<number | null>(null);
 
@@ -381,6 +389,30 @@ export const useEvenRun = (): EvenRunViewModel => {
         }
     }, [addLap, reset, setActivity, startOrResume, stop, updateSession, geoStatusMessage, appendLog]);
 
+    const syncToStrava = useCallback(async () => {
+        const current = sessionRef.current;
+        if (current.status !== 'finished' || current.points.length < 2) {
+            setSyncStatus('Treino não finalizado ou sem dados suficientes.');
+            return;
+        }
+
+        setIsSyncing(true);
+        setSyncStatus('Sincronizando com Strava...');
+        appendLog('[Strava] Sync started');
+
+        try {
+            const response = await uploadToStrava(current);
+            setSyncStatus('Sincronizado com sucesso!');
+            appendLog(`[Strava] ✅ Upload success: ID=${response.id}`);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+            setSyncStatus(`Erro: ${msg}`);
+            appendLog(`[Strava] ❌ Upload failed: ${msg}`);
+        } finally {
+            setIsSyncing(false);
+        }
+    }, [appendLog]);
+
     const actionHandlerRef = useRef(handleBridgeAction);
     actionHandlerRef.current = handleBridgeAction;
 
@@ -403,6 +435,31 @@ export const useEvenRun = (): EvenRunViewModel => {
         return () => {
             bridge.destroy();
         };
+    }, [appendLog]);
+
+    // Handle Strava OAuth callback
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+
+        if (code) {
+            const handleCallback = async () => {
+                appendLog('[Strava] 🔄 Capturando código de autorização...');
+                try {
+                    await exchangeCodeForTokens(code);
+                    setStravaConfig(getStravaConfig());
+                    appendLog('[Strava] ✅ Autorização concluída com sucesso!');
+                    
+                    // Limpar a URL sem recarregar a página
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } catch (error) {
+                    const msg = error instanceof Error ? error.message : 'Erro na troca de tokens';
+                    appendLog(`[Strava] ❌ Erro: ${msg}`);
+                    setSyncStatus(`Erro de autorização: ${msg}`);
+                }
+            };
+            handleCallback();
+        }
     }, [appendLog]);
 
     // Log mudanças de localização do usuário
@@ -512,5 +569,9 @@ export const useEvenRun = (): EvenRunViewModel => {
         stop,
         reset,
         addLap,
+        isSyncing,
+        syncStatus,
+        syncToStrava,
+        stravaConfig,
     };
 };
