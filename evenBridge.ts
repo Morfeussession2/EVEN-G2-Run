@@ -343,7 +343,7 @@ export class EvenRunBridge {
         const timeVal = formatDuration(metrics.elapsedMs);
         const distVal = formatDistance(metrics.distanceMeters);
         const velVal = formatPrimaryMetric(activity, metrics);
-        const content = `${timeVal}    ${distVal}        ${velVal}`;
+        const content = `${timeVal}    ${distVal}    ${velVal}`;
 
         await this.bridge.textContainerUpgrade(
             new TextContainerUpgrade({

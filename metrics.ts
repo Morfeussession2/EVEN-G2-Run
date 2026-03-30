@@ -117,19 +117,18 @@ export const formatDuration = (elapsedMs: number): string => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-export const formatPrimaryMetric = (activity: ActivityType, metrics: WorkoutMetrics): string => {
-    if (activity === 'ride') {
-        return metrics.avgSpeedKph > 0 ? `${metrics.avgSpeedKph.toFixed(1)} km/h` : '--';
+export const formatPrimaryMetric = (_activity: ActivityType, metrics: WorkoutMetrics): string => {
+    // Para todas as atividades (corrida, caminhada, pedalada), mostrar "Pace" (min/km)
+    // Se estiver parado ou sem dados, mostrar tracinhos no formato correto
+    if (!metrics.paceSecondsPerKm || metrics.paceSecondsPerKm > 3600) {
+        return '0:00 /km';
     }
-    // Para caminhada/corrida, mostrar "Pace" (min/km)
-    // Se estiver parado ou muito lento (> 60 min/km), mostrar tracinhos
-    if (!metrics.paceSecondsPerKm || metrics.paceSecondsPerKm > 3600) return '--';
-    
+
     const minutes = Math.floor(metrics.paceSecondsPerKm / 60);
     const seconds = metrics.paceSecondsPerKm % 60;
-    
-    // Formato clássico de relógios de corrida: 05'30"
-    return `${String(minutes).padStart(2, '0')}'${String(seconds).padStart(2, '0')}"`;
+
+    // Formato solicitado: X:XX /km (ex: 5:30 /km)
+    return `${minutes}:${String(seconds).padStart(2, '0')} /km`;
 };
 
 export const getMockOriginPoint = (): WorkoutPoint => ({
