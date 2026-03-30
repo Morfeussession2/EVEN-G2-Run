@@ -28,9 +28,11 @@ export function EvenRunApp() {
     } = useEvenRun();
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(true);
     const [showStravaModal, setShowStravaModal] = useState(false);
 
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+    const toggleHistory = () => setIsHistoryOpen(!isHistoryOpen);
 
     return (
         <main className="together-shell">
@@ -103,7 +105,7 @@ export function EvenRunApp() {
                         </section>
 
                         <section className="section">
-                            <div className="section-header">
+                            <div className={`section-header ${isHistoryOpen ? 'is-open' : ''}`} onClick={toggleHistory}>
                                 <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <g clipPath="url(#clip0_10001_76650)">
                                         <path d="M24 29H8V27H24V29ZM8 27H6V25H8V27ZM26 27H24V25H26V27ZM6 25H4V15H6V25ZM28 25H26V11H28V25ZM14 13H12V11H14V13ZM12 11H10V9H12V11ZM26 11H24V9H26V11ZM10 9H8V7H10V9ZM24 9H12V7H24V9ZM12 7H10V5H12V7ZM14 5H12V3H14V5Z" fill="currentColor"></path>
@@ -115,52 +117,59 @@ export function EvenRunApp() {
                                     </defs>
                                 </svg>
                                 <span>History</span>
+                                <svg className="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
                             </div>
-                            {pastRuns.length === 0 ? (
-                                <p style={{ fontSize: '13px', color: '#7B7B7B', textAlign: 'center' }}>No runs recorded yet.</p>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {pastRuns.map((run) => (
-                                        <div key={run.id} className="history-card">
-                                            <div className="history-main-content">
-                                                {run.imageBase64 && (
-                                                    <div className="history-map-thumb">
-                                                        <img src={run.imageBase64} alt="Route" />
+                            {isHistoryOpen && (
+                                <>
+                                    {pastRuns.length === 0 ? (
+                                        <p style={{ fontSize: '13px', color: '#7B7B7B', textAlign: 'center' }}>No runs recorded yet.</p>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            {pastRuns.map((run) => (
+                                                <div key={run.id} className="history-card">
+                                                    <div className="history-main-content">
+                                                        {run.imageBase64 && (
+                                                            <div className="history-map-thumb">
+                                                                <img src={run.imageBase64} alt="Route" />
+                                                            </div>
+                                                        )}
+                                                        <div className="history-metrics-side">
+                                                            <div className="history-metric-item">
+                                                                <span className="h-m-label">Distance</span>
+                                                                <span className="h-m-value">{(run.metrics.distanceMeters / 1000).toFixed(2)}km</span>
+                                                            </div>
+                                                            <div className="history-metric-item">
+                                                                <span className="h-m-label">Time</span>
+                                                                <span className="h-m-value">{run.metrics.elapsedMs ? new Date(run.metrics.elapsedMs).toISOString().substr(11, 8) : '00:00:00'}</span>
+                                                            </div>
+                                                            <div className="history-metric-item">
+                                                                <span className="h-m-label">Pace</span>
+                                                                <span className="h-m-value">
+                                                                    {run.metrics.paceSecondsPerKm
+                                                                        ? `${Math.floor(run.metrics.paceSecondsPerKm / 60)}:${String(Math.round(run.metrics.paceSecondsPerKm % 60)).padStart(2, '0')}/km`
+                                                                        : '--:--'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                )}
-                                                <div className="history-metrics-side">
-                                                    <div className="history-metric-item">
-                                                        <span className="h-m-label">Distance</span>
-                                                        <span className="h-m-value">{(run.metrics.distanceMeters / 1000).toFixed(2)}km</span>
-                                                    </div>
-                                                    <div className="history-metric-item">
-                                                        <span className="h-m-label">Time</span>
-                                                        <span className="h-m-value">{run.metrics.elapsedMs ? new Date(run.metrics.elapsedMs).toISOString().substr(11, 8) : '00:00:00'}</span>
-                                                    </div>
-                                                    <div className="history-metric-item">
-                                                        <span className="h-m-label">Pace</span>
-                                                        <span className="h-m-value">
-                                                            {run.metrics.paceSecondsPerKm 
-                                                                ? `${Math.floor(run.metrics.paceSecondsPerKm / 60)}:${String(Math.round(run.metrics.paceSecondsPerKm % 60)).padStart(2, '0')}/km` 
-                                                                : '--:--'}
-                                                        </span>
+
+                                                    <div className="history-footer">
+                                                        <span className="history-date">{new Date(Number(run.id)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                                        <button
+                                                            className="strava-sync-row-btn"
+                                                            onClick={() => syncToStrava()}
+                                                            disabled={isSyncing}
+                                                        >
+                                                            {isSyncing ? 'Sincronizando...' : 'Sync to Strava'}
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            
-                                            <div className="history-footer">
-                                                <span className="history-date">{new Date(Number(run.id)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                                                <button
-                                                    className="strava-sync-row-btn"
-                                                    onClick={() => syncToStrava()}
-                                                    disabled={isSyncing}
-                                                >
-                                                    {isSyncing ? 'Sincronizando...' : 'Sync to Strava'}
-                                                </button>
-                                            </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
+                                    )}
+                                </>
                             )}
                         </section>
 
@@ -237,8 +246,8 @@ export function EvenRunApp() {
                     <div className="modal-content" style={{ textAlign: 'center' }}>
                         <h2 className="section-title" style={{ fontSize: '20px', marginBottom: '20px' }}>Select Activity</h2>
                         <div className="button-group">
-                            <button className="primary-button" onClick={() => setActivity('run')}>Run</button>
                             <button className="secondary-button" onClick={() => setActivity('ride')}>Bike</button>
+                            <button className="primary-button" onClick={() => setActivity('run')}>Run</button>
                             <button className="secondary-button" onClick={() => setActivity('walk')}>Walk</button>
                         </div>
                     </div>

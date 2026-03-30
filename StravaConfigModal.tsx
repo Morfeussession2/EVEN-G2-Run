@@ -36,7 +36,7 @@ export function StravaConfigModal({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <p style={{ fontSize: '12px', color: '#666', marginBottom: '24px', lineHeight: '1.4' }}>
-                    Cada usuário deve configurar suas próprias chaves de API obtidas em 
+                    Any user must configure their own API keys obtained at
                     <a href="https://www.strava.com/settings/api" target="_blank" rel="noreferrer" style={{ color: '#FC4C02', textDecoration: 'none', marginLeft: '4px' }}>
                         strava.com/settings/api
                     </a>.
@@ -44,9 +44,9 @@ export function StravaConfigModal({ onClose }: { onClose: () => void }) {
 
                 <div className="input-group">
                     <label className="input-label">Client ID</label>
-                    <input 
+                    <input
                         className="config-input"
-                        type="text" 
+                        type="text"
                         value={clientId}
                         onChange={(e) => setClientId(e.target.value)}
                         placeholder="Ex: 218242"
@@ -55,9 +55,9 @@ export function StravaConfigModal({ onClose }: { onClose: () => void }) {
 
                 <div className="input-group">
                     <label className="input-label">Client Secret</label>
-                    <input 
+                    <input
                         className="config-input"
-                        type="password" 
+                        type="password"
                         value={clientSecret}
                         onChange={(e) => setClientSecret(e.target.value)}
                         placeholder="Seu Segredo da API"
@@ -65,16 +65,16 @@ export function StravaConfigModal({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div className="button-group" style={{ marginTop: '12px' }}>
-                    <button 
+                    <button
                         className="strava-orange-button"
                         onClick={handleConnect}
                         style={{ width: '100%', fontSize: '13px', padding: '14px' }}
                     >
-                        {config.isAuthorized ? 'Reautorizar Strava' : 'Conectar com Strava'}
+                        {config.isAuthorized ? 'Re-authorize Strava' : 'Connect with Strava'}
                     </button>
 
                     {config.isAuthorized && (
-                        <button 
+                        <button
                             onClick={handleDisconnect}
                             style={{
                                 background: 'none',
@@ -87,15 +87,15 @@ export function StravaConfigModal({ onClose }: { onClose: () => void }) {
                                 marginTop: '8px'
                             }}
                         >
-                            Limpar Configurações
+                            Disconnect Strava
                         </button>
                     )}
                 </div>
 
                 <div style={{ marginTop: '24px', textAlign: 'center' }}>
-                    <span style={{ 
-                        fontSize: '9px', 
-                        padding: '4px 10px', 
+                    <span style={{
+                        fontSize: '9px',
+                        padding: '4px 10px',
                         borderRadius: '12px',
                         backgroundColor: config.isAuthorized ? 'rgba(0, 255, 21, 0.1)' : 'rgba(255, 77, 77, 0.1)',
                         color: config.isAuthorized ? '#008411' : '#ff4d4d',
@@ -103,7 +103,7 @@ export function StravaConfigModal({ onClose }: { onClose: () => void }) {
                         fontWeight: 'bold',
                         letterSpacing: '0.5px'
                     }}>
-                        {config.isAuthorized ? 'Sincronização Ativa' : 'Sincronização Inativa'}
+                        {config.isAuthorized ? 'Sync Active' : 'Sync Inactive'}
                     </span>
                 </div>
             </div>

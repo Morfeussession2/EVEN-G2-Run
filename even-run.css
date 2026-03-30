@@ -71,11 +71,24 @@ body {
     align-items: center;
     gap: 10px;
     font-size: 15px;
+    /* Adjusting back or consistent size */
     letter-spacing: -0.17px;
     font-weight: 500;
-    /* Bolder as per G2 typography */
     color: #232323;
     margin-bottom: 12px;
+    cursor: pointer;
+    /* Clickable */
+    user-select: none;
+}
+
+.section-header .chevron-icon {
+    margin-left: auto;
+    /* Push to right */
+    transition: transform 0.3s ease;
+}
+
+.section-header.is-open .chevron-icon {
+    transform: rotate(180deg);
 }
 
 .section-header svg {
@@ -148,8 +161,8 @@ body {
 /* History Card Component */
 .history-card {
     background: #F7F7F7;
-    border-radius: 12px;
-    padding: 16px;
+    border-radius: 8px;
+    padding: 5px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -157,7 +170,7 @@ body {
 
 .history-main-content {
     display: flex;
-    gap: 5px;
+    gap: 2px;
     align-items: center;
 }
 
@@ -475,7 +488,7 @@ body {
     padding: 24px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    max-height: 80vh;
+    max-height: 90vh;
     overflow-y: auto;
 }
 
@@ -563,7 +576,7 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
+    width: 90%;
     height: 100%;
     background: rgba(217, 217, 217, 0.9);
     backdrop-filter: blur(8px);
