@@ -408,7 +408,7 @@ body {
     grid-template-columns: repeat(3, 1fr);
     background: #F7F7F7;
     /* Lighter cleaner gray as in the Navigate app */
-    padding: 16px 12px 24px;
+    padding: 30px 12px 40px;
     /* More bottom padding for a premium feel */
     gap: 12px;
     z-index: 50;
