@@ -26,6 +26,7 @@ export function EvenRunApp() {
         stop,
         reset,
         addLap,
+        recheckLocation,
     } = useEvenRun();
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -75,6 +76,9 @@ export function EvenRunApp() {
                         <span className="warning-title">Location Permission Required</span>
                         <span className="warning-text">Please allow location access to track your run accurately. {geoPermission === 'unsupported' ? '(Unsupported by device)' : ''}</span>
                     </div>
+                    <button className="recheck-button" onClick={recheckLocation}>
+                        Check Again
+                    </button>
                 </div>
             )}
 

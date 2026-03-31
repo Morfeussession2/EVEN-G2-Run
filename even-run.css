@@ -685,3 +685,25 @@ body {
     from { transform: translateY(-100%); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
+
+.recheck-button {
+    margin-left: auto;
+    background-color: #E53E3E;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.recheck-button:hover {
+    background-color: #C53030;
+}
+
+.recheck-button:active {
+    background-color: #9B2C2C;
+}

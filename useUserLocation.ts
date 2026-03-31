@@ -8,6 +8,7 @@ export interface UseUserLocationResult {
     error: Error | null;
     permission: GeoPermissionState;
     statusMessage: string;
+    recheck: () => void;
 }
 
 export interface UseWatchPositionOptions {
@@ -38,6 +39,14 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
     const [statusMessage, setStatusMessage] = useState('Fetching location...');
     const mountedRef = useRef(true);
     const watchIdRef = useRef<number | null>(null);
+    const [recheckTick, setRecheckTick] = useState(0);
+
+    const recheck = () => {
+        setRecheckTick(prev => prev + 1);
+        setLoading(true);
+        setPermission('idle');
+        setStatusMessage('Re-checking location...');
+    };
 
     useEffect(() => {
         mountedRef.current = true;
@@ -116,7 +125,7 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
                 watchIdRef.current = null;
             }
         };
-    }, []);
+    }, [recheckTick]);
 
     // Efeito separado para gerenciar watchPosition baseado no prop 'enabled'
     useEffect(() => {
@@ -175,5 +184,6 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
         error,
         permission,
         statusMessage,
+        recheck,
     };
 };
