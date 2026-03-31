@@ -35,7 +35,7 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [permission, setPermission] = useState<GeoPermissionState>('idle');
-    const [statusMessage, setStatusMessage] = useState('Obtendo localização...');
+    const [statusMessage, setStatusMessage] = useState('Fetching location...');
     const mountedRef = useRef(true);
     const watchIdRef = useRef<number | null>(null);
 
@@ -47,7 +47,7 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
             const mockPoint = getMockOriginPoint();
             setLocation(mockPoint);
             setPermission('unsupported');
-            setStatusMessage('Geolocation não suportado: usando localização padrão (Café, SP)');
+            setStatusMessage('Location not supported: using default location');
             setLoading(false);
             return;
         }
@@ -70,7 +70,7 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
             console.log(`📡 GPS UPDATE: lat=${latitude.toFixed(5)}, lng=${longitude.toFixed(5)}, acc=${accuracy.toFixed(0)}m`);
             setLocation(point);
             setPermission('granted');
-            setStatusMessage('Localização real ativada - rastreando posição');
+            setStatusMessage('GPS active');
             setLoading(false);
             setError(null);
         };
@@ -82,13 +82,13 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
             let permState: GeoPermissionState = 'error';
 
             if (positionError.code === positionError.PERMISSION_DENIED) {
-                errorMsg = 'Permissão de localização negada';
+                errorMsg = 'Location permission denied';
                 permState = 'denied';
             } else if (positionError.code === positionError.POSITION_UNAVAILABLE) {
-                errorMsg = 'Localização indisponível (sinal GPS fraco ou bloqueado)';
+                errorMsg = 'Location unavailable (weak GPS signal)';
                 permState = 'denied';
             } else if (positionError.code === positionError.TIMEOUT) {
-                errorMsg = 'Timeout ao obter localização';
+                errorMsg = 'Location request timed out';
                 permState = 'error';
             }
 
@@ -96,7 +96,7 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
             const mockPoint = getMockOriginPoint();
             setLocation(mockPoint);
             setPermission(permState);
-            setStatusMessage(`${errorMsg}: usando localização padrão (Café, SP)`);
+            setStatusMessage(`${errorMsg}: using default location`);
             setLoading(false);
             setError(new Error(errorMsg));
         };

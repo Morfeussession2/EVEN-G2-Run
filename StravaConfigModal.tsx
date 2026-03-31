@@ -12,7 +12,7 @@ export function StravaConfigModal({ onClose }: { onClose: () => void }) {
             return;
         }
         saveStravaConfig(clientId, clientSecret);
-        const redirectUri = window.location.origin;
+        const redirectUri = window.location.href.split('?')[0].split('#')[0];
         const scope = 'read,activity:write';
         const authUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
         window.location.href = authUrl;

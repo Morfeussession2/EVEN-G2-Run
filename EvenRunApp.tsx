@@ -8,6 +8,7 @@ export function EvenRunApp() {
         session,
         bridgeReady,
         debugLogs,
+        geoPermission,
         geoStatusMessage,
         currentPoint,
         previewRoutePoints,
@@ -61,6 +62,21 @@ export function EvenRunApp() {
                     ) : '···'}
                 </button>
             </header>
+
+            {/* LOCATION PERMISSION WARNING */}
+            {(geoPermission === 'denied' || geoPermission === 'unsupported') && (
+                <div className="permission-warning-banner">
+                    <div className="warning-icon">
+                        <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16 2L2 30H30L16 2ZM16 8L26 28H6L16 8ZM14 12V20H18V12H14ZM14 22V26H18V22H14Z" fill="currentColor" />
+                        </svg>
+                    </div>
+                    <div className="warning-content">
+                        <span className="warning-title">Location Permission Required</span>
+                        <span className="warning-text">Please allow location access to track your run accurately. {geoPermission === 'unsupported' ? '(Unsupported by device)' : ''}</span>
+                    </div>
+                </div>
+            )}
 
             {/* SLIDE-DOWN MENU */}
             {isMenuOpen && (

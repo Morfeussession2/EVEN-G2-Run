@@ -441,17 +441,32 @@ export const useEvenRun = (): EvenRunViewModel => {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
+        const error = params.get('error');
+
+        if (error) {
+            appendLog(`[Strava] ❌ Acesso negado: ${error}`);
+            setSyncStatus(`Acesso ao Strava negado: ${error}`);
+            // Limpar a URL
+            window.history.replaceState({}, document.title, window.location.href.split('?')[0]);
+            return;
+        }
 
         if (code) {
             const handleCallback = async () => {
                 appendLog('[Strava] 🔄 Capturando código de autorização...');
+                setSyncStatus('Finalizando conexão com Strava...');
+                
                 try {
                     await exchangeCodeForTokens(code);
                     setStravaConfig(getStravaConfig());
                     appendLog('[Strava] ✅ Autorização concluída com sucesso!');
+                    setSyncStatus('Conectado ao Strava!');
                     
                     // Limpar a URL sem recarregar a página
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                    setTimeout(() => {
+                        window.history.replaceState({}, document.title, window.location.href.split('?')[0]);
+                        setSyncStatus(null);
+                    }, 2000);
                 } catch (error) {
                     const msg = error instanceof Error ? error.message : 'Erro na troca de tokens';
                     appendLog(`[Strava] ❌ Erro: ${msg}`);
