@@ -27,6 +27,7 @@ export function EvenRunApp() {
         reset,
         addLap,
         recheckLocation,
+        triggerPermission,
     } = useEvenRun();
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,6 +36,11 @@ export function EvenRunApp() {
 
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
     const toggleHistory = () => setIsHistoryOpen(!isHistoryOpen);
+
+    const handleRecheck = async () => {
+        recheckLocation();
+        await triggerPermission();
+    };
 
     return (
         <main className="together-shell">
@@ -76,7 +82,7 @@ export function EvenRunApp() {
                         <span className="warning-title">Location Permission Required</span>
                         <span className="warning-text">Please allow location access to track your run accurately. {geoPermission === 'unsupported' ? '(Unsupported by device)' : ''}</span>
                     </div>
-                    <button className="recheck-button" onClick={recheckLocation}>
+                    <button className="recheck-button" onClick={handleRecheck}>
                         Check Again
                     </button>
                 </div>

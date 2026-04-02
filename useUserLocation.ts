@@ -10,6 +10,7 @@ export interface UseUserLocationResult {
     permission: GeoPermissionState;
     statusMessage: string;
     recheck: () => void;
+    triggerPermission: () => Promise<void>;
 }
 
 export interface UseWatchPositionOptions {
@@ -43,38 +44,47 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
         setStatusMessage('Re-checking location...');
     };
 
+    const triggerBridgePermission = async () => {
+        if (!bridge) return;
+        console.log('🔌 [Bridge] Calling getSystemLocation to trigger system permission popup...');
+        try {
+            const bridgeResult = await bridge.getSystemLocation();
+            if (bridgeResult && typeof bridgeResult === 'object') {
+                // Android and iOS can have different field names
+                const rawLat = bridgeResult.lat ?? bridgeResult.latitude;
+                const rawLng = bridgeResult.lng ?? bridgeResult.longitude;
+                
+                const lat = typeof rawLat === 'string' ? parseFloat(rawLat) : rawLat;
+                const lng = typeof rawLng === 'string' ? parseFloat(rawLng) : rawLng;
+
+                if (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
+                    console.log('📡 [Bridge] Received coordinates from JS bridge:', lat, lng);
+                    const point: WorkoutPoint = {
+                        lat,
+                        lng,
+                        accuracy: Number(bridgeResult.accuracy) || 10,
+                        timestamp: Date.now(),
+                        altitude: bridgeResult.altitude ? Number(bridgeResult.altitude) : null,
+                        speedMps: null,
+                    };
+                    if (mountedRef.current) {
+                        setLocation(point);
+                        setPermission('granted');
+                        setStatusMessage('GPS active (via bridge)');
+                        setLoading(false);
+                        setError(null);
+                    }
+                } else {
+                    console.log('📡 [Bridge] Bridge call success but no coordinates in payload:', bridgeResult);
+                }
+            }
+        } catch (e) {
+            console.warn('[Bridge] getSystemLocation call failed', e);
+        }
+    };
+
     useEffect(() => {
         mountedRef.current = true;
-
-        const triggerBridgePermission = async () => {
-            if (!bridge) return;
-            console.log('🔌 [Bridge] Calling getSystemLocation to trigger system permission popup...');
-            try {
-                const bridgeResult = await bridge.getSystemLocation();
-                if (bridgeResult && typeof bridgeResult === 'object') {
-                    // Se o bridge já retornou coordenadas, podemos usá-las como ponto de partida
-                    const lat = bridgeResult.lat ?? bridgeResult.latitude;
-                    const lng = bridgeResult.lng ?? bridgeResult.longitude;
-                    if (typeof lat === 'number' && typeof lng === 'number') {
-                        console.log('📡 [Bridge] Received coordinates from JS bridge:', lat, lng);
-                        const point: WorkoutPoint = {
-                            lat,
-                            lng,
-                            accuracy: bridgeResult.accuracy ?? 10,
-                            timestamp: Date.now(),
-                            altitude: bridgeResult.altitude ?? null,
-                            speedMps: null,
-                        };
-                        if (mountedRef.current && !location) {
-                            setLocation(point);
-                            setPermission('granted');
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn('[Bridge] getSystemLocation call failed', e);
-            }
-        };
 
         if (!navigator.geolocation) {
             // Navegador não suporta geolocation
@@ -217,5 +227,6 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
         permission,
         statusMessage,
         recheck,
+        triggerPermission: triggerBridgePermission,
     };
 };

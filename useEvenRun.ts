@@ -63,6 +63,7 @@ export interface EvenRunViewModel {
     reset: () => void;
     addLap: () => void;
     recheckLocation: () => void;
+    triggerPermission: () => Promise<void>;
     isSyncing: boolean;
     syncStatus: string | null;
     syncToStrava: () => Promise<void>;
@@ -89,7 +90,7 @@ export const useEvenRun = (): EvenRunViewModel => {
     // Obter localização real do usuário (com fallback para mock)
     // Ativar watchPosition quando status for 'tracking'
     const isTracking = session.status === 'tracking';
-    const { location: userLocation, permission, statusMessage, recheck } = useUserLocation({
+    const { location: userLocation, permission, statusMessage, recheck, triggerPermission } = useUserLocation({
         enabled: isTracking,
         bridge: bridgeReady ? bridgeRef.current : null
     });
@@ -589,6 +590,7 @@ export const useEvenRun = (): EvenRunViewModel => {
         reset,
         addLap,
         recheckLocation: recheck,
+        triggerPermission,
         isSyncing,
         syncStatus,
         syncToStrava,
