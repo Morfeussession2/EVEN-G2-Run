@@ -89,7 +89,10 @@ export const useEvenRun = (): EvenRunViewModel => {
     // Obter localização real do usuário (com fallback para mock)
     // Ativar watchPosition quando status for 'tracking'
     const isTracking = session.status === 'tracking';
-    const { location: userLocation, permission, statusMessage, recheck } = useUserLocation({ enabled: isTracking });
+    const { location: userLocation, permission, statusMessage, recheck } = useUserLocation({
+        enabled: isTracking,
+        bridge: bridgeReady ? bridgeRef.current : null
+    });
     
     // Sempre manter ref atualizada com a localização mais recente
     useEffect(() => {

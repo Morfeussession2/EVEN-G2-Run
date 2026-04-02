@@ -354,6 +354,18 @@ export class EvenRunBridge {
         );
     }
 
+    async getSystemLocation(): Promise<any> {
+        if (!this.bridge) return null;
+        try {
+            const result = await this.bridge.callEvenApp('getSystemLocation');
+            this.log(`getSystemLocation result: ${JSON.stringify(result)}`);
+            return result;
+        } catch (error) {
+            this.log(`getSystemLocation failed: ${error instanceof Error ? error.message : 'Unknown'}`);
+            return null;
+        }
+    }
+
     destroy(): void {
         if (!this.bridge) return;
         this.bridge.shutDownPageContainer(0).catch(() => { });

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GeoPermissionState, WorkoutPoint } from './types';
 import { getMockOriginPoint } from './metrics';
+import type { EvenRunBridge } from './evenBridge';
 
 export interface UseUserLocationResult {
     location: WorkoutPoint | null;
@@ -13,24 +14,18 @@ export interface UseUserLocationResult {
 
 export interface UseWatchPositionOptions {
     enabled?: boolean; // true = iniciar watch contínuo, false = parar watch
+    bridge?: EvenRunBridge | null;
 }
 
 /**
  * Hook para obter a localização real do usuário via navigator.geolocation.
  * Implementa fallback automático para coordenadas mock se permissão negada ou não disponível.
  * 
- * Quando enabled=true, rastreia posição contínuamente (watchPosition).
- * Quando enabled=false, para o rastreamento.
- * 
- * Estados de retorno:
- * - loading: true enquanto aguarda resposta inicial do geolocation
- * - location: WorkoutPoint com coordenadas reais ou mock (nunca null após mount)
- * - permission: reflete estado da permissão
- * - statusMessage: descrição legível do status
- * - error: erro durante geolocation (se houver)
+ * Suporta integração com o Even Hub Bridge para disparar o popup de permissão do sistema
+ * caso o navigator.geolocation comum falhe ou seja ignorado pelo WebView.
  */
 export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocationResult => {
-    const { enabled = false } = options ?? {};
+    const { enabled = false, bridge = null } = options ?? {};
     
     const [location, setLocation] = useState<WorkoutPoint | null>(null);
     const [loading, setLoading] = useState(true);
@@ -51,6 +46,36 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
     useEffect(() => {
         mountedRef.current = true;
 
+        const triggerBridgePermission = async () => {
+            if (!bridge) return;
+            console.log('🔌 [Bridge] Calling getSystemLocation to trigger system permission popup...');
+            try {
+                const bridgeResult = await bridge.getSystemLocation();
+                if (bridgeResult && typeof bridgeResult === 'object') {
+                    // Se o bridge já retornou coordenadas, podemos usá-las como ponto de partida
+                    const lat = bridgeResult.lat ?? bridgeResult.latitude;
+                    const lng = bridgeResult.lng ?? bridgeResult.longitude;
+                    if (typeof lat === 'number' && typeof lng === 'number') {
+                        console.log('📡 [Bridge] Received coordinates from JS bridge:', lat, lng);
+                        const point: WorkoutPoint = {
+                            lat,
+                            lng,
+                            accuracy: bridgeResult.accuracy ?? 10,
+                            timestamp: Date.now(),
+                            altitude: bridgeResult.altitude ?? null,
+                            speedMps: null,
+                        };
+                        if (mountedRef.current && !location) {
+                            setLocation(point);
+                            setPermission('granted');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[Bridge] getSystemLocation call failed', e);
+            }
+        };
+
         if (!navigator.geolocation) {
             // Navegador não suporta geolocation
             const mockPoint = getMockOriginPoint();
@@ -59,6 +84,11 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
             setStatusMessage('Location not supported: using default location');
             setLoading(false);
             return;
+        }
+
+        // Se temos bridge, tentamos "acordar" a permissão do sistema logo de cara
+        if (bridge) {
+            triggerBridgePermission();
         }
 
         const handleSuccess = (position: GeolocationPosition) => {
@@ -93,6 +123,8 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
             if (positionError.code === positionError.PERMISSION_DENIED) {
                 errorMsg = 'Location permission denied';
                 permState = 'denied';
+                // Tentar bridge novamente se permissão negada pelo browser direto
+                if (bridge) triggerBridgePermission();
             } else if (positionError.code === positionError.POSITION_UNAVAILABLE) {
                 errorMsg = 'Location unavailable (weak GPS signal)';
                 permState = 'denied';
@@ -125,13 +157,13 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
                 watchIdRef.current = null;
             }
         };
-    }, [recheckTick]);
+    }, [recheckTick, bridge]);
 
     // Efeito separado para gerenciar watchPosition baseado no prop 'enabled'
     useEffect(() => {
         if (!navigator.geolocation) return;
 
-        if (enabled && watchIdRef.current === null && permission === 'granted') {
+        if (enabled && watchIdRef.current === null && (permission === 'granted' || permission === 'idle')) {
             // Iniciar watch contínuo
             watchIdRef.current = navigator.geolocation.watchPosition(
                 (position) => {
