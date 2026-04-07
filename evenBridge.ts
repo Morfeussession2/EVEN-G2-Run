@@ -366,8 +366,16 @@ export class EvenRunBridge {
         }
     }
 
+    async shutDown(exitMode: number = 0): Promise<boolean> {
+        if (!this.bridge) return false;
+        try {
+            return await this.bridge.shutDownPageContainer(exitMode);
+        } catch (e) {
+            return false;
+        }
+    }
+
     destroy(): void {
-        if (!this.bridge) return;
-        this.bridge.shutDownPageContainer(0).catch(() => { });
+        this.shutDown(0).catch(() => { });
     }
 }

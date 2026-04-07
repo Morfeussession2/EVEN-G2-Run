@@ -248,12 +248,12 @@ export function EvenRunApp() {
                     <div className="metric-label">Pace</div>
                     <div className="metric-sublabel">Current</div>
                 </div>
+                {/* <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '12px', color: '#7B7B7B' }}>
+                    v{appJson.version}
+                </div> */}
             </div>
 
             {/* VERSION TAG */}
-            <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '12px', color: '#7B7B7B' }}>
-                versão {appJson.version}
-            </div>
 
             {/* CONTROLS (Commented out for testing as requested) */}
             {/* 

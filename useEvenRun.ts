@@ -97,8 +97,30 @@ export const useEvenRun = (): EvenRunViewModel => {
         storage.getItem('RunHistory').then((data: string | null) => {
             if (data && data !== '') {
                 try {
-                    const parsed = JSON.parse(data);
-                    setPastRuns(parsed);
+                    const parsed = JSON.parse(data) as PastRun[];
+                    
+                    // Rehydrate images for the history cards
+                    Promise.all(parsed.map(async (run) => {
+                        if (!run.imageBase64 && run.session.points && run.session.points.length >= 2) {
+                            try {
+                                const pngBytes = await renderRoutePreviewPng(run.session.points, 400, 200);
+                                const blob = new Blob([pngBytes.buffer as ArrayBuffer], { type: 'image/png' });
+                                return new Promise<PastRun>((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                        run.imageBase64 = reader.result as string;
+                                        resolve(run);
+                                    };
+                                    reader.readAsDataURL(blob);
+                                });
+                            } catch (e) {
+                                return run;
+                            }
+                        }
+                        return run;
+                    })).then(rehydrated => {
+                        setPastRuns(rehydrated);
+                    });
                 } catch (e) {
                     console.warn('Failed to parse RunHistory:', e);
                 }
@@ -379,8 +401,9 @@ export const useEvenRun = (): EvenRunViewModel => {
         }
 
         if (action === 'double_click') {
-            if (current.status === 'tracking') pause();
-            else if (current.status === 'paused') startOrResume();
+            bridgeRef.current?.shutDown(1).then(() => {
+                appendLog('[System] User requested exit layer via double-click');
+            });
             return;
         }
 
