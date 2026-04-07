@@ -250,6 +250,11 @@ export function EvenRunApp() {
                 </div>
             </div>
 
+            {/* VERSION TAG */}
+            <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '12px', color: '#7B7B7B' }}>
+                versão {appJson.version}
+            </div>
+
             {/* CONTROLS (Commented out for testing as requested) */}
             {/* 
             <section className="section" style={{ padding: '0 16px 20px' }}>
@@ -301,11 +306,6 @@ export function EvenRunApp() {
                     {syncStatus}
                 </div>
             )}
-
-            {/* VERSION TAG */}
-            <div style={{ position: 'absolute', bottom: '5px', right: '5px', fontSize: '10px', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none', zIndex: 9999 }}>
-                v{appJson.version}
-            </div>
         </main>
     );
 }
