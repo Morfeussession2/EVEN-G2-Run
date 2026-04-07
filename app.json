@@ -1,8 +1,8 @@
 {
-    "package_id": "com.evenrun.g2",
+    "package_id": "com.evenrun.g2v2",
     "edition": "202601",
-    "name": "Even Run",
-    "version": "1.2.2",
+    "name": "Run",
+    "version": "1.2.5",
     "min_app_version": "2.0.0",
     "min_sdk_version": "0.0.7",
     "entrypoint": "index.html",
@@ -19,10 +19,6 @@
         {
             "name": "location",
             "desc": "Required to track your run and show your position on the map."
-        },
-        {
-            "name": "gps",
-            "desc": "Required for high-accuracy tracking on Android devices."
         }
     ],
     "supported_languages": [

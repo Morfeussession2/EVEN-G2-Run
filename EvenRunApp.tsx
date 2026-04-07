@@ -2,6 +2,7 @@ import { EvenRunMap } from './EvenRunMap';
 import { useEvenRun } from './useEvenRun';
 import { StravaConfigModal } from './StravaConfigModal';
 import { useState } from 'react';
+import appJson from './app.json';
 
 export function EvenRunApp() {
     const {
@@ -300,6 +301,11 @@ export function EvenRunApp() {
                     {syncStatus}
                 </div>
             )}
+
+            {/* VERSION TAG */}
+            <div style={{ position: 'absolute', bottom: '5px', right: '5px', fontSize: '10px', color: 'rgba(255,255,255,0.3)', pointerEvents: 'none', zIndex: 9999 }}>
+                v{appJson.version}
+            </div>
         </main>
     );
 }

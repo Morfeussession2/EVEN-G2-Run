@@ -1,4 +1,4 @@
-/// <reference types="vite/client" />
+import { storage } from './storage';
 import type { WorkoutSession, WorkoutPoint } from './types';
 
 const CLIENT_ID_KEY = 'strava_client_id';
@@ -23,12 +23,12 @@ export interface StravaUploadResponse {
 }
 
 /**
- * Gets the current Strava configuration from localStorage.
+ * Gets the current Strava configuration from persistent storage.
  */
-export function getStravaConfig(): StravaConfig {
-    const clientId = localStorage.getItem(CLIENT_ID_KEY);
-    const clientSecret = localStorage.getItem(CLIENT_SECRET_KEY);
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+export async function getStravaConfig(): Promise<StravaConfig> {
+    const clientId = await storage.getItem(CLIENT_ID_KEY);
+    const clientSecret = await storage.getItem(CLIENT_SECRET_KEY);
+    const refreshToken = await storage.getItem(REFRESH_TOKEN_KEY);
 
     return {
         clientId,
@@ -38,38 +38,38 @@ export function getStravaConfig(): StravaConfig {
 }
 
 /**
- * Saves the Strava Client ID and Secret to localStorage.
+ * Saves the Strava Client ID and Secret to persistent storage.
  */
-export function saveStravaConfig(clientId: string, clientSecret: string) {
-    localStorage.setItem(CLIENT_ID_KEY, clientId);
-    localStorage.setItem(CLIENT_SECRET_KEY, clientSecret);
+export async function saveStravaConfig(clientId: string, clientSecret: string) {
+    await storage.setItem(CLIENT_ID_KEY, clientId);
+    await storage.setItem(CLIENT_SECRET_KEY, clientSecret);
 }
 
 /**
- * Clears all Strava data from localStorage.
+ * Clears all Strava data from persistent storage.
  */
-export function clearStravaConfig() {
-    localStorage.removeItem(CLIENT_ID_KEY);
-    localStorage.removeItem(CLIENT_SECRET_KEY);
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(EXPIRES_AT_KEY);
+export async function clearStravaConfig() {
+    await storage.removeItem(CLIENT_ID_KEY);
+    await storage.removeItem(CLIENT_SECRET_KEY);
+    await storage.removeItem(ACCESS_TOKEN_KEY);
+    await storage.removeItem(REFRESH_TOKEN_KEY);
+    await storage.removeItem(EXPIRES_AT_KEY);
 }
 
 /**
  * Returns a valid access token, refreshing it if necessary.
  */
 async function getValidAccessToken(): Promise<string> {
-    const { clientId, clientSecret } = getStravaConfig();
-    const expiresAt = localStorage.getItem(EXPIRES_AT_KEY);
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    const { clientId, clientSecret } = await getStravaConfig();
+    const expiresAt = await storage.getItem(EXPIRES_AT_KEY);
+    const refreshToken = await storage.getItem(REFRESH_TOKEN_KEY);
     const now = Math.floor(Date.now() / 1000);
 
     if (!clientId || !clientSecret || !refreshToken) {
         throw new Error('Configuração do Strava ausente ou não autorizada.');
     }
 
-    const storedToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const storedToken = await storage.getItem(ACCESS_TOKEN_KEY);
     if (storedToken && expiresAt && parseInt(expiresAt) > now + 600) {
         return storedToken;
     }
@@ -94,9 +94,9 @@ async function getValidAccessToken(): Promise<string> {
     }
 
     const data = await response.json();
-    localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
-    localStorage.setItem(EXPIRES_AT_KEY, data.expires_at.toString());
+    await storage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+    await storage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+    await storage.setItem(EXPIRES_AT_KEY, data.expires_at.toString());
 
     return data.access_token;
 }
@@ -105,7 +105,7 @@ async function getValidAccessToken(): Promise<string> {
  * Exchanges an authorization code for initial tokens.
  */
 export async function exchangeCodeForTokens(code: string): Promise<void> {
-    const { clientId, clientSecret } = getStravaConfig();
+    const { clientId, clientSecret } = await getStravaConfig();
     if (!clientId || !clientSecret) {
         throw new Error('Client ID ou Secret não configurados antes da autorização.');
     }
@@ -129,9 +129,9 @@ export async function exchangeCodeForTokens(code: string): Promise<void> {
     }
 
     const data = await response.json();
-    localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
-    localStorage.setItem(EXPIRES_AT_KEY, data.expires_at.toString());
+    await storage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+    await storage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+    await storage.setItem(EXPIRES_AT_KEY, data.expires_at.toString());
 }
 
 /**

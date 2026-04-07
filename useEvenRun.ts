@@ -16,6 +16,7 @@ import {
 } from './metrics';
 import { uploadToStrava, exchangeCodeForTokens, getStravaConfig, StravaConfig } from './stravaService';
 import { useUserLocation } from './useUserLocation';
+import { storage } from './storage';
 import type {
     ActivityType,
     BridgeAction,
@@ -83,7 +84,27 @@ export const useEvenRun = (): EvenRunViewModel => {
     const [tickNow, setTickNow] = useState(() => Date.now());
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncStatus, setSyncStatus] = useState<string | null>(null);
-    const [stravaConfig, setStravaConfig] = useState<StravaConfig>(() => getStravaConfig());
+    const [stravaConfig, setStravaConfig] = useState<StravaConfig>({
+        clientId: null,
+        clientSecret: null,
+        isAuthorized: false,
+    });
+
+    // Load Strava config and history on mount
+    useEffect(() => {
+        getStravaConfig().then(setStravaConfig);
+
+        storage.getItem('RunHistory').then((data: string | null) => {
+            if (data && data !== '') {
+                try {
+                    const parsed = JSON.parse(data);
+                    setPastRuns(parsed);
+                } catch (e) {
+                    console.warn('Failed to parse RunHistory:', e);
+                }
+            }
+        });
+    }, []);
     const userLocationRef = useRef<WorkoutPoint | null>(null);
     const gpsIntervalRef = useRef<number | null>(null);
 
@@ -261,12 +282,19 @@ export const useEvenRun = (): EvenRunViewModel => {
                 const blob = new Blob([pngBytes.buffer as ArrayBuffer], { type: 'image/png' });
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    setPastRuns(prev => [{
+                    const newRun = {
                         id: Date.now().toString(),
                         session: finishedSession,
                         metrics: computeMetrics(finishedSession, now),
                         imageBase64: reader.result as string
-                    }, ...prev]);
+                    };
+                    setPastRuns(prev => {
+                        const updated = [newRun, ...prev];
+                        // Strip imageBase64 to prevent exceeding BLE bridge limits
+                        const safeToStore = updated.map(run => ({ ...run, imageBase64: undefined }));
+                        Promise.resolve(storage.setItem('RunHistory', JSON.stringify(safeToStore))).catch(() => {});
+                        return updated;
+                    });
                 };
                 reader.readAsDataURL(blob);
             }).catch(() => appendLog('[History] preview generation failed'));
@@ -463,7 +491,8 @@ export const useEvenRun = (): EvenRunViewModel => {
                 
                 try {
                     await exchangeCodeForTokens(code);
-                    setStravaConfig(getStravaConfig());
+                    const freshConfig = await getStravaConfig();
+                    setStravaConfig(freshConfig);
                     appendLog('[Strava] ✅ Autorização concluída com sucesso!');
                     setSyncStatus('Conectado ao Strava!');
                     

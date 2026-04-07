@@ -1,31 +1,54 @@
-import { useState } from 'react';
-import { saveStravaConfig, getStravaConfig, clearStravaConfig } from './stravaService';
+import { useState, useEffect } from 'react';
+import { saveStravaConfig, getStravaConfig, clearStravaConfig, type StravaConfig } from './stravaService';
 
 export function StravaConfigModal({ onClose }: { onClose: () => void }) {
-    const config = getStravaConfig();
-    const [clientId, setClientId] = useState(config.clientId || '');
-    const [clientSecret, setClientSecret] = useState(config.clientSecret || '');
+    const [config, setConfig] = useState<StravaConfig | null>(null);
+    const [clientId, setClientId] = useState('');
+    const [clientSecret, setClientSecret] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
 
-    const handleConnect = () => {
+    useEffect(() => {
+        async function loadConfig() {
+            const data = await getStravaConfig();
+            setConfig(data);
+            setClientId(data.clientId || '');
+            setClientSecret(data.clientSecret || '');
+            setIsLoading(false);
+        }
+        loadConfig();
+    }, []);
+
+    const handleConnect = async () => {
         if (!clientId || !clientSecret) {
             alert('Por favor, preencha o Client ID e o Client Secret.');
             return;
         }
-        saveStravaConfig(clientId, clientSecret);
+        await saveStravaConfig(clientId, clientSecret);
         const redirectUri = window.location.href.split('?')[0].split('#')[0];
         const scope = 'read,activity:write';
         const authUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
         window.location.href = authUrl;
     };
 
-    const handleDisconnect = () => {
+    const handleDisconnect = async () => {
         if (confirm('Tem certeza que deseja desconectar do Strava?')) {
-            clearStravaConfig();
+            await clearStravaConfig();
             setClientId('');
             setClientSecret('');
+            setConfig({ clientId: null, clientSecret: null, isAuthorized: false });
             onClose();
         }
     };
+
+    if (isLoading || !config) {
+        return (
+            <div className="modal-overlay">
+                <div className="modal-content">
+                    <p style={{ textAlign: 'center', padding: '20px' }}>Loading Strava settings...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="modal-overlay" onClick={onClose}>
