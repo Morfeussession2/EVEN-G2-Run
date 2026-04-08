@@ -27,7 +27,7 @@ export interface UseWatchPositionOptions {
  */
 export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocationResult => {
     const { enabled = false, bridge = null } = options ?? {};
-    
+
     const [location, setLocation] = useState<WorkoutPoint | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -53,7 +53,7 @@ export const useUserLocation = (options?: UseWatchPositionOptions): UseUserLocat
                 // Android and iOS can have different field names
                 const rawLat = bridgeResult.lat ?? bridgeResult.latitude;
                 const rawLng = bridgeResult.lng ?? bridgeResult.longitude;
-                
+
                 const lat = typeof rawLat === 'string' ? parseFloat(rawLat) : rawLat;
                 const lng = typeof rawLng === 'string' ? parseFloat(rawLng) : rawLng;
 

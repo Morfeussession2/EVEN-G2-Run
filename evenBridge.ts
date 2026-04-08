@@ -25,12 +25,6 @@ const CLICK_EVENTS = new Set<any>([
     0,
 ]);
 
-const DOUBLE_CLICK_EVENTS = new Set<any>([
-    OsEventTypeList.DOUBLE_CLICK_EVENT,
-    'DOUBLE_CLICK_EVENT',
-    'DOUBLE_CLICK',
-    3,
-]);
 
 const parseEventType = (event: any): string | number | undefined =>
     event?.sysEvent?.eventType ??
@@ -236,11 +230,6 @@ export class EvenRunBridge {
 
             this.bridge.onEvenHubEvent((event: any) => {
                 const eventType = parseEventType(event);
-
-                if (DOUBLE_CLICK_EVENTS.has(eventType)) {
-                    onAction('double_click');
-                    return;
-                }
 
                 const isClick =
                     CLICK_EVENTS.has(eventType) ||

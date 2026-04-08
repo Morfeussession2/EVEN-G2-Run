@@ -67,7 +67,7 @@ export interface EvenRunViewModel {
     triggerPermission: () => Promise<void>;
     isSyncing: boolean;
     syncStatus: string | null;
-    syncToStrava: () => Promise<void>;
+    syncToStrava: (sessionToSync?: WorkoutSession) => Promise<void>;
     stravaConfig: StravaConfig;
 }
 
@@ -98,7 +98,7 @@ export const useEvenRun = (): EvenRunViewModel => {
             if (data && data !== '') {
                 try {
                     const parsed = JSON.parse(data) as PastRun[];
-                    
+
                     // Rehydrate images for the history cards
                     Promise.all(parsed.map(async (run) => {
                         if (!run.imageBase64 && run.session.points && run.session.points.length >= 2) {
@@ -137,12 +137,12 @@ export const useEvenRun = (): EvenRunViewModel => {
         enabled: isTracking,
         bridge: bridgeReady ? bridgeRef.current : null
     });
-    
+
     // Sempre manter ref atualizada com a localização mais recente
     useEffect(() => {
         userLocationRef.current = userLocation;
     }, [userLocation]);
-    
+
     // Usar localização real se disponível, senão mock
     const mockOrigin: WorkoutPoint = userLocation ?? getMockOriginPoint();
     const geoPermission: GeoPermissionState = permission;
@@ -159,7 +159,7 @@ export const useEvenRun = (): EvenRunViewModel => {
     }, []);
 
     const metrics = useMemo(() => computeMetrics(session, tickNow), [session, tickNow]);
-    
+
     const currentPoint = session.points[session.points.length - 1] ?? mockOrigin;
 
     useEffect(() => {
@@ -225,11 +225,11 @@ export const useEvenRun = (): EvenRunViewModel => {
 
     const pushRouteToWearable = useCallback(async (points: WorkoutPoint[], label: string) => {
         if (!bridgeRef.current || points.length < 2) return;
-        
+
         try {
             appendLog(`[Map] rendering route (${label})`);
             const pngBytes = await renderRoutePreviewPng(points, ROUTE_WIDTH, ROUTE_HEIGHT);
-            
+
             const pushed = await bridgeRef.current.pushRouteImage(Array.from(pngBytes));
             if (pushed) {
                 appendLog(`[Map] ✅ route sent to wearable (${label})`);
@@ -314,7 +314,7 @@ export const useEvenRun = (): EvenRunViewModel => {
                         const updated = [newRun, ...prev];
                         // Strip imageBase64 to prevent exceeding BLE bridge limits
                         const safeToStore = updated.map(run => ({ ...run, imageBase64: undefined }));
-                        Promise.resolve(storage.setItem('RunHistory', JSON.stringify(safeToStore))).catch(() => {});
+                        Promise.resolve(storage.setItem('RunHistory', JSON.stringify(safeToStore))).catch(() => { });
                         return updated;
                     });
                 };
@@ -384,7 +384,7 @@ export const useEvenRun = (): EvenRunViewModel => {
     const handleBridgeAction = useCallback((action: BridgeAction) => {
         const current = sessionRef.current;
         const now = Date.now();
-        
+
         // Debounce: ignorar ações que chegam muito rapidamente (< 200ms)
         if (now - lastActionTimeRef.current < 200) {
             return;
@@ -392,18 +392,11 @@ export const useEvenRun = (): EvenRunViewModel => {
         lastActionTimeRef.current = now;
 
         if (current.status === 'selecting_activity') {
-            if (action === 'double_click') return;
+
             if (action === 'primary') setActivity('ride');
             if (action === 'secondary') setActivity('run');
             if (action === 'tertiary') setActivity('walk');
             appendLog('[Flow] activity selected, ready');
-            return;
-        }
-
-        if (action === 'double_click') {
-            bridgeRef.current?.shutDown(1).then(() => {
-                appendLog('[System] User requested exit layer via double-click');
-            });
             return;
         }
 
@@ -445,9 +438,9 @@ export const useEvenRun = (): EvenRunViewModel => {
         }
     }, [addLap, reset, setActivity, startOrResume, stop, updateSession, geoStatusMessage, appendLog]);
 
-    const syncToStrava = useCallback(async () => {
-        const current = sessionRef.current;
-        if (current.status !== 'finished' || current.points.length < 2) {
+    const syncToStrava = useCallback(async (sessionToSync?: WorkoutSession) => {
+        const targetSession = sessionToSync || sessionRef.current;
+        if (targetSession.status !== 'finished' || targetSession.points.length < 2) {
             setSyncStatus('Treino não finalizado ou sem dados suficientes.');
             return;
         }
@@ -457,7 +450,7 @@ export const useEvenRun = (): EvenRunViewModel => {
         appendLog('[Strava] Sync started');
 
         try {
-            const response = await uploadToStrava(current);
+            const response = await uploadToStrava(targetSession);
             setSyncStatus('Sincronizado com sucesso!');
             appendLog(`[Strava] ✅ Upload success: ID=${response.id}`);
         } catch (error) {
@@ -511,14 +504,14 @@ export const useEvenRun = (): EvenRunViewModel => {
             const handleCallback = async () => {
                 appendLog('[Strava] 🔄 Capturando código de autorização...');
                 setSyncStatus('Finalizando conexão com Strava...');
-                
+
                 try {
                     await exchangeCodeForTokens(code);
                     const freshConfig = await getStravaConfig();
                     setStravaConfig(freshConfig);
                     appendLog('[Strava] ✅ Autorização concluída com sucesso!');
                     setSyncStatus('Conectado ao Strava!');
-                    
+
                     // Limpar a URL sem recarregar a página
                     setTimeout(() => {
                         window.history.replaceState({}, document.title, window.location.href.split('?')[0]);

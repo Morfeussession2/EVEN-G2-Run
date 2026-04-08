@@ -186,7 +186,7 @@ export function EvenRunApp() {
                                                         <span className="history-date">{new Date(Number(run.id)).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                                                         <button
                                                             className="strava-sync-row-btn"
-                                                            onClick={() => syncToStrava()}
+                                                            onClick={() => syncToStrava(run.session)}
                                                             disabled={isSyncing}
                                                         >
                                                             {isSyncing ? 'Sincronizando...' : 'Sync to Strava'}
